@@ -1,21 +1,25 @@
 'use client';
 
 import React from 'react';
-import { Send, Mail, MessageSquare, Link as LinkIcon, Plus } from 'lucide-react';
+import { Send, Sparkles, Mail, MessageSquare } from 'lucide-react';
 
-export default function MarketingSuitePage() {
+export default function MarketingPage() {
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Send className="w-5 h-5 text-blue-400" /> Marketing Automation Suite
-          </h2>
-          <p className="text-xs text-slate-400">Launch Email, SMS, WhatsApp Campaigns, and Short Links.</p>
+    <div className="p-8 space-y-8 bg-slate-950 text-white min-h-screen">
+      <div className="flex justify-between items-center bg-slate-900/80 p-6 rounded-2xl border border-slate-800 backdrop-blur-xl">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-blue-600/20 text-blue-400 rounded-xl border border-blue-500/30">
+            <Send className="w-8 h-8" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              Omnichannel Marketing Suite
+            </h1>
+            <p className="text-slate-400 text-sm">
+              Create Broadcast Campaigns on WhatsApp, SMS, Email & Messenger
+            </p>
+          </div>
         </div>
-        <button className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold">
-          <Plus className="w-3.5 h-3.5" /> + New Campaign
-        </button>
       </div>
     </div>
   );
