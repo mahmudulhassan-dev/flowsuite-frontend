@@ -1,5 +1,6 @@
 import React from 'react';
 import './globals.css';
+import { AuthProvider } from '../lib/auth-context';
 
 export const metadata = {
   title: 'FlowSuite — Omnichannel AI Social Media Automation & Unified Inbox Platform',
@@ -12,8 +13,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className="dark">
       <body className="bg-slate-950 text-slate-100 min-h-screen">
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );
 }
+

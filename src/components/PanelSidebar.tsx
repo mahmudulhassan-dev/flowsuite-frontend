@@ -9,9 +9,15 @@ import {
   Globe, ChevronLeft, ChevronRight, DollarSign, Gift, FileText, Lock
 } from 'lucide-react';
 
+import { useAuth } from '../lib/auth-context';
+
 export default function PanelSidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const { user, workspaces, activeWorkspaceId, logout, switchWorkspace } = useAuth();
+  
+  const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId) || { name: 'Agency Workspace' };
+
 
   const navItems = [
     { name: 'Dashboard', href: '/panel', icon: LayoutDashboard, color: 'text-blue-400' },
@@ -79,13 +85,37 @@ export default function PanelSidebar() {
         </button>
 
         {!collapsed && (
-          <div className="flex items-center gap-3 px-2 py-2 rounded-xl bg-slate-800/50 border border-slate-800">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center font-bold text-xs text-white flex-shrink-0">
-              U
-            </div>
-            <div className="overflow-hidden">
-              <h4 className="text-xs font-bold text-white truncate">Agency Workspace</h4>
-              <p className="text-[10px] text-slate-400 truncate">Pro Agency Plan</p>
+          <div className="space-y-2">
+            {workspaces.length > 1 && (
+              <select
+                value={activeWorkspaceId || ''}
+                onChange={(e) => switchWorkspace(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-[10px] text-slate-300 focus:outline-none focus:border-purple-500 cursor-pointer"
+              >
+                {workspaces.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    💼 {w.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            
+            <div className="flex items-center justify-between p-2 rounded-xl bg-slate-800/50 border border-slate-800">
+              <div className="flex items-center gap-2 overflow-hidden">
+                <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center font-bold text-xs text-white flex-shrink-0">
+                  {user?.fullName?.charAt(0) || 'U'}
+                </div>
+                <div className="overflow-hidden">
+                  <h4 className="text-xs font-bold text-white truncate">{user?.fullName || 'User'}</h4>
+                  <p className="text-[9px] text-slate-400 truncate">{activeWorkspace.name}</p>
+                </div>
+              </div>
+              <button 
+                onClick={logout}
+                className="text-[10px] text-red-400 hover:text-red-300 font-semibold px-2 py-1 rounded hover:bg-red-500/10 transition"
+              >
+                Logout
+              </button>
             </div>
           </div>
         )}
