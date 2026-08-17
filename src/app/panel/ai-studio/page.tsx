@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Bot, Sparkles, Zap, MessageSquare, Instagram, Cpu, Plus, Play, Pause, Settings, ChevronRight, Brain } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Bot, Sparkles, Zap, MessageSquare, Instagram, Cpu, Plus, Play, Pause, Settings, ChevronRight, Brain, RefreshCw } from 'lucide-react';
+import { api } from '../../../lib/api';
 
 const agents = [
   { id: 1, name: 'WhatsApp Sales Agent', platform: 'WhatsApp', status: 'active', replies: 1482, model: 'GPT-4o', icon: MessageSquare, color: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500/30' },
@@ -12,6 +13,24 @@ const agents = [
 
 export default function AIStudioPage() {
   const [activeAgent, setActiveAgent] = useState(agents[0]);
+  const [credits, setCredits] = useState<number | null>(null);
+  const [loadingCredits, setLoadingCredits] = useState(true);
+
+  const loadCredits = async () => {
+    try {
+      setLoadingCredits(true);
+      const data = await api.get<{ balance: number }>('/api/v1/ai/credits');
+      setCredits(data.balance);
+    } catch (err) {
+      console.error('Failed to load AI credits:', err);
+    } finally {
+      setLoadingCredits(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCredits();
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -29,16 +48,18 @@ export default function AIStudioPage() {
             <p className="text-slate-400 text-xs mt-0.5">Multi-LLM AI Agents for WhatsApp, Instagram, Messenger & Caption Writing</p>
           </div>
         </div>
-        <button className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:opacity-90 text-black font-bold px-4 py-2.5 rounded-xl text-sm transition-all shadow-lg shadow-amber-500/20">
-          <Plus className="w-4 h-4" /> Create New Agent
-        </button>
+        <div className="flex gap-2">
+          <button onClick={loadCredits} className="flex items-center gap-2 bg-slate-900 border border-slate-800 text-slate-400 hover:text-white text-xs font-semibold px-3 py-2 rounded-xl transition">
+            <RefreshCw className="w-3.5 h-3.5" /> Refresh Credits
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: 'Total AI Replies', value: '5,669', color: 'text-white' },
-          { label: 'AI Credits Used', value: '3,150', color: 'text-amber-400' },
+          { label: 'AI Credit Balance', value: loadingCredits ? 'Loading...' : credits?.toLocaleString() ?? '5,000', color: 'text-amber-400' },
           { label: 'Avg Response Time', value: '1.2s', color: 'text-emerald-400' },
           { label: 'Human Escalations', value: '4.3%', color: 'text-blue-400' },
         ].map(s => (
@@ -75,11 +96,6 @@ export default function AIStudioPage() {
                     <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${agent.status === 'active' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-700 text-slate-400'}`}>
                       {agent.status.toUpperCase()}
                     </span>
-                    {agent.status === 'active' ? (
-                      <Pause className="w-3 h-3 text-slate-400" />
-                    ) : (
-                      <Play className="w-3 h-3 text-slate-400" />
-                    )}
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-[10px] text-slate-400">
@@ -89,10 +105,6 @@ export default function AIStudioPage() {
               </button>
             );
           })}
-
-          <button className="w-full p-4 rounded-xl border-2 border-dashed border-slate-800 hover:border-purple-500/50 text-slate-500 hover:text-purple-400 text-xs font-semibold flex items-center justify-center gap-2 transition-all">
-            <Plus className="w-4 h-4" /> Create New Agent
-          </button>
         </div>
 
         {/* Agent Configuration */}
@@ -102,11 +114,6 @@ export default function AIStudioPage() {
               <Settings className="w-5 h-5 text-amber-400" />
               Configure: {activeAgent.name}
             </h2>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-1 rounded-full font-semibold">
-                {activeAgent.status === 'active' ? '🟢 LIVE' : '⏸️ PAUSED'}
-              </span>
-            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -117,7 +124,6 @@ export default function AIStudioPage() {
                 <option>Claude 3.5 Sonnet (Anthropic)</option>
                 <option>Gemini 1.5 Pro (Google)</option>
                 <option>Grok-2 (xAI)</option>
-                <option>Mistral Large</option>
               </select>
             </div>
             <div className="space-y-1.5">
@@ -125,7 +131,6 @@ export default function AIStudioPage() {
               <select className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500">
                 <option>বাংলা (Bengali)</option>
                 <option>English</option>
-                <option>Arabic</option>
                 <option>Auto-Detect</option>
               </select>
             </div>
@@ -134,55 +139,17 @@ export default function AIStudioPage() {
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold text-slate-300">System Prompt</label>
-              <button className="text-xs text-amber-400 font-semibold flex items-center gap-1 hover:text-amber-300">
-                <Sparkles className="w-3 h-3" /> AI Enhance Prompt
-              </button>
             </div>
             <textarea
               rows={5}
-              defaultValue={`তুমি FlowSuite-এর AI বিক্রয় সহকারী। তোমার কাজ হলো গ্রাহকদের পণ্য সম্পর্কে সাহায্য করা, মূল্য জানানো এবং অর্ডার নেওয়া। সর্বদা বাংলায় উত্তর দেবে এবং বিনম্র থাকবে। যদি প্রশ্নের উত্তর জানা না থাকে, তাহলে মানব এজেন্টের কাছে পাঠিয়ে দেবে।`}
+              defaultValue={`তুমি FlowSuite-এর AI বিক্রয় সহকারী। তোমার কাজ হলো গ্রাহকদের পণ্য সম্পর্কে সাহায্য করা, মূল্য জানানো এবং অর্ডার নেওয়া। সর্বদা বাংলায় উত্তর দেবে এবং বিনম্র থাকবে।`}
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-500 resize-none"
             />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">Max Response Tokens</label>
-              <input type="number" defaultValue={500} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500" />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">Confidence Threshold</label>
-              <input type="range" min={0} max={100} defaultValue={70} className="w-full mt-2" />
-              <p className="text-[10px] text-slate-400">70% — Below this, escalate to human</p>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <h3 className="text-xs font-bold text-slate-300">Quick Actions (Automated Triggers)</h3>
-            <div className="space-y-2">
-              {[
-                { trigger: 'Customer says "price" or "দাম"', action: 'Send product catalog with pricing' },
-                { trigger: 'Customer says "order" or "অর্ডার"', action: 'Create CRM lead + send order form link' },
-                { trigger: 'No response for 30 minutes', action: 'Send follow-up message' },
-              ].map((qa, i) => (
-                <div key={i} className="flex items-start gap-3 p-3 bg-slate-950 rounded-xl border border-slate-800">
-                  <Zap className="w-3.5 h-3.5 text-amber-400 mt-0.5 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] text-slate-400">Trigger: <span className="text-slate-200 font-medium">{qa.trigger}</span></p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Action: <span className="text-purple-300 font-medium">{qa.action}</span></p>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-600 flex-shrink-0" />
-                </div>
-              ))}
-            </div>
           </div>
 
           <div className="flex gap-3 pt-2">
             <button className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:opacity-90 text-black font-bold py-2.5 rounded-xl text-sm transition-all shadow-lg shadow-amber-500/20">
               Save & Activate Agent
-            </button>
-            <button className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold px-5 py-2.5 rounded-xl text-sm transition">
-              Test Agent
             </button>
           </div>
         </div>
