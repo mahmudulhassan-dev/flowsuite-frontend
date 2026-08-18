@@ -318,7 +318,7 @@ export default function PublisherPage() {
                 value={caption}
                 onChange={e => setCaption(e.target.value)}
                 placeholder="Write caption here or let AI assist..."
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-purple-500 resize-none text-slate-200"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-purple-500 resize-none"
               />
             </div>
 
@@ -332,7 +332,7 @@ export default function PublisherPage() {
                 value={mediaUrl}
                 onChange={(e) => setMediaUrl(e.target.value)}
                 placeholder="https://example.com/image.png"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500 text-slate-200"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500"
               />
             </div>
 
@@ -631,7 +631,7 @@ export default function PublisherPage() {
                   placeholder="e.g. Launching our new mobile application on Google Play Store! Try it free..."
                   value={aiPromptInput}
                   onChange={e => setAiPromptInput(e.target.value)}
-                  className="w-full mt-1.5 bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500 text-slate-200"
+                  className="w-full mt-1.5 bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500"
                 />
               </div>
               <div className="flex gap-2 justify-end pt-2">

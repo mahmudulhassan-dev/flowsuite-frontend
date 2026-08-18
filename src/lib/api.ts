@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://flowsuite.amanasuite.com';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://flowsuite.amansuite.com';
 
 interface RequestOptions extends RequestInit {
   body?: any;
