@@ -21,7 +21,10 @@ import {
   FileText,
   Lock,
   DollarSign,
-  Gift
+  Gift,
+  Link2,
+  QrCode,
+  Wrench
 } from 'lucide-react';
 import Link from 'next/link';
 import { useThemeLang, Language } from '../lib/theme-lang-context';
@@ -503,6 +506,57 @@ export default function BusinessLandingPageClient() {
               </p>
               <Link href="/panel" className="text-amber-600 dark:text-amber-400 text-xs font-bold flex items-center gap-1 hover:underline">
                 {t('ai_agent_studio')} &rarr;
+              </Link>
+            </div>
+
+            <div className="bg-slate-900/80 dark:bg-slate-900/80 light:bg-white border border-slate-800 dark:border-slate-800 light:border-slate-200 rounded-3xl p-6 space-y-4 hover:border-emerald-500/50 transition">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                <Link2 className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                {lang === 'bn' ? 'স্মার্ট বায়োলিংক পেজ বিল্ডার' : 'Bio Links Landing Page Builder'}
+              </h3>
+              <p className="text-slate-600 dark:text-slate-400 text-xs leading-relaxed">
+                {lang === 'bn'
+                  ? 'सहजেই মডুলার বায়োলিংক পেজ তৈরি করুন, মিডিয়া প্লেয়ার যুক্ত করুন এবং সোশ্যাল মিডিয়া ট্রাফিকের সঠিক অ্যানালিটিক্স ট্র্যাক করুন।'
+                  : 'Design premium custom biolink pages with drag-and-drop links, video/music embeds, and real-time mobile preview.'}
+              </p>
+              <Link href="/panel" className="text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center gap-1 hover:underline">
+                {lang === 'bn' ? 'বায়োলিংক পেজ বিল্ডার' : 'Bio Links Builder'} &rarr;
+              </Link>
+            </div>
+
+            <div className="bg-slate-900/80 dark:bg-slate-900/80 light:bg-white border border-slate-800 dark:border-slate-800 light:border-slate-200 rounded-3xl p-6 space-y-4 hover:border-blue-500/50 transition">
+              <div className="w-12 h-12 rounded-2xl bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                <QrCode className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                {lang === 'bn' ? 'লিংক শর্টনার ও কিউআর জেনারেটর' : 'URL Shortener & QR Generator'}
+              </h3>
+              <p className="text-slate-600 dark:text-slate-400 text-xs leading-relaxed">
+                {lang === 'bn'
+                  ? 'ব্র্যান্ডেড কাস্টম স্লাগ সহ লিংক সংক্ষেপ করুন এবং রঙ, কাস্টম লোগো ও গ্রেডিয়েন্ট সম্বলিত কিউআর কোড ডাউনলোড করুন।'
+                  : 'Shorten target URLs with custom slugs and export beautiful high-fidelity QR codes with gradients.'}
+              </p>
+              <Link href="/panel" className="text-blue-600 dark:text-blue-400 text-xs font-bold flex items-center gap-1 hover:underline">
+                {lang === 'bn' ? 'লিংক শর্টনার ড্যাশবোর্ড' : 'URL Shortener'} &rarr;
+              </Link>
+            </div>
+
+            <div className="bg-slate-900/80 dark:bg-slate-900/80 light:bg-white border border-slate-800 dark:border-slate-800 light:border-slate-200 rounded-3xl p-6 space-y-4 hover:border-indigo-500/50 transition">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                <Wrench className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                {lang === 'bn' ? '১২০+ ওয়েব ডেভেলপার টুলস' : '120+ Web Developer Tools'}
+              </h3>
+              <p className="text-slate-600 dark:text-slate-400 text-xs leading-relaxed">
+                {lang === 'bn'
+                  ? 'ডিএনএস, এসএসএল চেক, মোরস কনভার্টার, পাসওয়ার্ড স্ট্রেন্থ এবং মিনিফায়ার সহ সকল ডেভেলপার ইউটিলিটি এক জায়গায়।'
+                  : 'Access a complete suite of network utility check tools, converters, minifiers, and cryptographic hash generators.'}
+              </p>
+              <Link href="/panel" className="text-indigo-600 dark:text-indigo-400 text-xs font-bold flex items-center gap-1 hover:underline">
+                {lang === 'bn' ? 'ওয়েব টুলস ড্যাশবোর্ড' : 'Web Tools Suite'} &rarr;
               </Link>
             </div>
           </div>

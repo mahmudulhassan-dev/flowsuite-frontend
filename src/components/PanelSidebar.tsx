@@ -6,7 +6,8 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Calendar, MessageSquare, Bot,
   FolderOpen, Send, Users, Wallet, Settings,
-  Globe, ChevronLeft, ChevronRight, DollarSign, Gift, FileText, Lock
+  Globe, ChevronLeft, ChevronRight, DollarSign, Gift, FileText, Lock,
+  Link2, QrCode, Wrench
 } from 'lucide-react';
 
 import { useAuth } from '../lib/auth-context';
@@ -24,6 +25,10 @@ export default function PanelSidebar() {
     { name: 'Social Publisher', href: '/panel/publisher', icon: Calendar, color: 'text-purple-400' },
     { name: 'Unified Inbox', href: '/panel/inbox', icon: MessageSquare, color: 'text-blue-400' },
     { name: 'AI Agent Studio', href: '/panel/ai-studio', icon: Bot, color: 'text-amber-400' },
+    { name: 'Bio Links', href: '/panel/bio-links', icon: Link2, color: 'text-emerald-400' },
+    { name: 'URL Shortener', href: '/panel/shortener', icon: Globe, color: 'text-blue-400' },
+    { name: 'QR Generator', href: '/panel/qr-generator', icon: QrCode, color: 'text-purple-400' },
+    { name: 'Web Tools', href: '/panel/tools', icon: Wrench, color: 'text-indigo-400' },
     { name: 'Asset Manager', href: '/panel/assets', icon: FolderOpen, color: 'text-indigo-400' },
     { name: 'Marketing Suite', href: '/panel/marketing', icon: Send, color: 'text-blue-400' },
     { name: 'CRM & Contacts', href: '/panel/crm', icon: Users, color: 'text-purple-400' },
