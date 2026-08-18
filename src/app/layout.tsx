@@ -1,6 +1,7 @@
 import React from 'react';
 import './globals.css';
 import { AuthProvider } from '../lib/auth-context';
+import { ThemeLangProvider } from '../lib/theme-lang-context';
 
 export const metadata = {
   title: 'FlowSuite — Omnichannel AI Social Media Automation & Unified Inbox Platform',
@@ -11,13 +12,16 @@ export const metadata = {
 // Landing page (/) is clean. /panel has its own layout.
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark" suppressHydrationWarning>
       <body className="bg-slate-950 text-slate-100 min-h-screen">
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <ThemeLangProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </ThemeLangProvider>
       </body>
     </html>
   );
 }
+
 
