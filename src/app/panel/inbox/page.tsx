@@ -17,7 +17,7 @@ interface Message {
 
 interface Thread {
   id: string;
-  channel: 'GMAIL' | 'SMS' | 'WHATSAPP' | 'WEB_CHAT';
+  platform: 'GMAIL' | 'SMS' | 'WHATSAPP' | 'WEB_CHAT';
   externalSenderId: string;
   customerName: string | null;
   customerPhone: string | null;
@@ -386,7 +386,7 @@ export default function InboxPage() {
                           </div>
                           <span className="text-xs font-semibold text-white truncate">{t.customerName || 'Unknown'}</span>
                         </div>
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${channelColors[t.channel]}`}>{channelLabels[t.channel]}</span>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${channelColors[t.platform]}`}>{channelLabels[t.platform]}</span>
                       </div>
                       <p className="text-slate-400 text-[10px] truncate">{lastMsg ? lastMsg.body : 'No messages yet'}</p>
                       <p className="text-[9px] text-slate-600">{new Date(t.lastMessageAt).toLocaleTimeString()}</p>
@@ -411,7 +411,7 @@ export default function InboxPage() {
                       <p className="text-sm font-bold text-white">{selectedThread.customerName}</p>
                       <div className="flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-                        <span className="text-[10px] text-slate-400">Via {channelLabels[selectedThread.channel]}</span>
+                        <span className="text-[10px] text-slate-400">Via {channelLabels[selectedThread.platform]}</span>
                       </div>
                     </div>
                   </div>
