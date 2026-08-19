@@ -64,6 +64,52 @@ export default function InboxPage() {
   const socketRef = useRef<Socket | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
+  // WhatsApp QR pairing modal states
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [waStatus, setWaStatus] = useState<'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'QR'>('DISCONNECTED');
+  const [waQr, setWaQr] = useState<string | null>(null);
+  const [waLoading, setWaLoading] = useState(false);
+
+  const checkWhatsAppStatus = async () => {
+    try {
+      const res = await api.get<{ status: 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'QR'; qr?: string }>('/api/v1/whatsapp/status');
+      setWaStatus(res.status);
+      if (res.qr) setWaQr(res.qr);
+    } catch (err) {
+      console.error('Failed to get WhatsApp status:', err);
+    }
+  };
+
+  const handleConnectWhatsApp = async () => {
+    try {
+      setWaLoading(true);
+      await api.post('/api/v1/whatsapp/connect');
+      setWaStatus('CONNECTING');
+      setWaQr(null);
+    } catch (err) {
+      console.error('Failed to start WhatsApp pairing:', err);
+    } finally {
+      setWaLoading(false);
+    }
+  };
+
+  const handleDisconnectWhatsApp = async () => {
+    try {
+      setWaLoading(true);
+      await api.post('/api/v1/whatsapp/disconnect');
+      setWaStatus('DISCONNECTED');
+      setWaQr(null);
+    } catch (err) {
+      console.error('Failed to disconnect WhatsApp:', err);
+    } finally {
+      setWaLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    checkWhatsAppStatus();
+  }, []);
+
   const embedScript = `<script 
   src="https://suite.amanasuite.com/widget.js" 
   data-org-id="org_main_001" 
@@ -135,6 +181,16 @@ export default function InboxPage() {
 
     socket.on('connect', () => {
       console.log('Connected to socket server');
+    });
+
+    socket.on('whatsapp:status', (data: { status: 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'QR' }) => {
+      setWaStatus(data.status);
+      if (data.status !== 'QR') setWaQr(null);
+    });
+
+    socket.on('whatsapp:qr', (data: { qr: string }) => {
+      setWaStatus('QR');
+      setWaQr(data.qr);
     });
 
     socket.on('inbox:message', (eventData: { threadId: string; message: Message }) => {
@@ -231,6 +287,15 @@ export default function InboxPage() {
 
         {/* Tab & Actions toggle */}
         <div className="flex gap-2">
+          <button
+            onClick={() => {
+              checkWhatsAppStatus();
+              setShowQrModal(true);
+            }}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all"
+          >
+            🔌 WhatsApp Pairing
+          </button>
           <button
             onClick={() => setShowCreateModal(true)}
             className="bg-purple-600 hover:bg-purple-500 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all"
@@ -471,6 +536,88 @@ export default function InboxPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* WHATSAPP QR MODAL */}
+      {showQrModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md space-y-5 text-center">
+            <div className="space-y-1.5">
+              <h3 className="text-base font-bold text-white flex items-center justify-center gap-2">
+                🟢 WhatsApp QR Pairing
+              </h3>
+              <p className="text-slate-400 text-xs">
+                Scan the QR code below with your WhatsApp app on your phone to link your WhatsApp account.
+              </p>
+            </div>
+
+            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[250px] relative">
+              {waStatus === 'CONNECTED' ? (
+                <div className="space-y-3">
+                  <div className="w-14 h-14 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto border border-emerald-500/30">
+                    <Check className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <p className="text-white font-bold text-sm">WhatsApp Linked Successfully</p>
+                    <p className="text-slate-500 text-xs mt-1">Your inbox is now syncing with WhatsApp messages in real-time.</p>
+                  </div>
+                </div>
+              ) : waStatus === 'QR' && waQr ? (
+                <div className="space-y-3">
+                  <img src={waQr} alt="WhatsApp QR Code" className="w-48 h-48 rounded-xl border border-slate-850 mx-auto" />
+                  <p className="text-slate-400 text-xs">Waiting for scan...</p>
+                </div>
+              ) : waStatus === 'CONNECTING' ? (
+                <div className="space-y-3 text-center">
+                  <RefreshCw className="w-8 h-8 text-purple-500 animate-spin mx-auto" />
+                  <p className="text-slate-400 text-xs">Connecting to WhatsApp service and generating QR...</p>
+                </div>
+              ) : (
+                <div className="space-y-3 text-center">
+                  <Phone className="w-10 h-10 text-slate-600 mx-auto" />
+                  <p className="text-slate-400 text-xs">No active WhatsApp pairing session found.</p>
+                  <button
+                    onClick={handleConnectWhatsApp}
+                    disabled={waLoading}
+                    className="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold py-2 px-4 rounded-xl transition-all"
+                  >
+                    {waLoading ? 'Starting...' : 'Pair WhatsApp Account'}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2 justify-end pt-2">
+              {waStatus !== 'DISCONNECTED' && waStatus !== 'CONNECTED' && (
+                <button
+                  type="button"
+                  onClick={handleConnectWhatsApp}
+                  disabled={waLoading}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${waLoading ? 'animate-spin' : ''}`} /> Refresh QR
+                </button>
+              )}
+              {waStatus === 'CONNECTED' && (
+                <button
+                  type="button"
+                  onClick={handleDisconnectWhatsApp}
+                  disabled={waLoading}
+                  className="bg-red-600 hover:bg-red-500 text-white font-semibold px-4 py-2.5 rounded-xl text-xs"
+                >
+                  Disconnect Account
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowQrModal(false)}
+                className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold px-4 py-2.5 rounded-xl text-xs"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
