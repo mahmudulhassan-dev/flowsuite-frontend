@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   MessageSquare, Send, Check, Copy, Mic, Phone, Plus, RefreshCw, Search,
-  Filter, X, ChevronDown, Inbox, Code, Bot, Users
+  Filter, X, ChevronDown, Inbox, Code, Bot, Users, Plug, Link2, ExternalLink,
+  AlertCircle, CheckCircle2, Wifi, WifiOff, Settings2, ChevronRight
 } from 'lucide-react';
 import { api } from '../../../lib/api';
 import { io, Socket } from 'socket.io-client';
@@ -72,6 +73,111 @@ const PLATFORMS: {
 const getPlatformConfig = (p: Platform | string) =>
   PLATFORMS.find(x => x.key === p) ?? PLATFORMS[0];
 
+// ─── Channel Connection Cards ───────────────────────────────────────────────────
+interface ChannelCard {
+  key: string;
+  name: string;
+  emoji: string;
+  description: string;
+  gradient: string;
+  method: 'qr' | 'webhook' | 'oauth' | 'bot_token' | 'coming_soon';
+  helpUrl?: string;
+  setupSteps: string[];
+  popular?: boolean;
+}
+
+const CHANNEL_CARDS: ChannelCard[] = [
+  {
+    key: 'WHATSAPP',
+    name: 'WhatsApp',
+    emoji: '💬',
+    description: 'Connect via WhatsApp Web QR code pairing. Receive & reply to customer messages directly from your inbox.',
+    gradient: 'from-emerald-600/20 to-emerald-900/10',
+    method: 'qr',
+    popular: true,
+    setupSteps: [
+      'Click "Connect WhatsApp"',
+      'Scan QR code with your WhatsApp mobile app',
+      'Messages will appear in real-time inbox',
+    ],
+  },
+  {
+    key: 'FACEBOOK',
+    name: 'Messenger',
+    emoji: '💙',
+    description: 'Connect your Facebook Page Messenger to receive & reply to DMs from your Facebook audience.',
+    gradient: 'from-blue-600/20 to-blue-900/10',
+    method: 'webhook',
+    helpUrl: 'https://developers.facebook.com/docs/messenger-platform',
+    popular: true,
+    setupSteps: [
+      'Go to Facebook Developers → Your App → Messenger',
+      'Enter your Facebook Page ID & Access Token in Settings',
+      'Set webhook URL: flowsuite.amansuite.com/api/v1/webhook/facebook',
+      'Messages will flow into your unified inbox',
+    ],
+  },
+  {
+    key: 'INSTAGRAM',
+    name: 'Instagram DM',
+    emoji: '📸',
+    description: 'Connect your Instagram Business account to manage DMs, story replies, and comment mentions.',
+    gradient: 'from-pink-600/20 to-purple-900/10',
+    method: 'oauth',
+    helpUrl: 'https://developers.facebook.com/docs/instagram-api',
+    popular: true,
+    setupSteps: [
+      'Connect your Instagram Business/Creator account',
+      'Authorize FlowSuite via Facebook Login',
+      'DMs and mentions will sync to inbox',
+    ],
+  },
+  {
+    key: 'TELEGRAM',
+    name: 'Telegram',
+    emoji: '✈️',
+    description: 'Connect a Telegram Bot to receive messages and send replies. Perfect for support channels.',
+    gradient: 'from-sky-600/20 to-sky-900/10',
+    method: 'bot_token',
+    helpUrl: 'https://core.telegram.org/bots#botfather',
+    popular: true,
+    setupSteps: [
+      'Open Telegram and message @BotFather',
+      'Type /newbot and follow instructions',
+      'Copy the Bot Token provided by BotFather',
+      'Paste token below — FlowSuite auto-configures the webhook',
+    ],
+  },
+  {
+    key: 'TIKTOK',
+    name: 'TikTok DM',
+    emoji: '🎵',
+    description: 'Receive TikTok DMs and comment replies from your TikTok creator/business account.',
+    gradient: 'from-red-600/20 to-slate-900/10',
+    method: 'oauth',
+    helpUrl: 'https://developers.tiktok.com/',
+    setupSteps: [
+      'Connect TikTok Business account via OAuth',
+      'Grant DM and comment permissions',
+      'Messages appear in unified inbox',
+    ],
+  },
+  {
+    key: 'THREADS',
+    name: 'Threads',
+    emoji: '🧵',
+    description: 'Manage Threads DMs and mention replies. Connect your Meta Threads account.',
+    gradient: 'from-slate-600/20 to-slate-900/10',
+    method: 'oauth',
+    helpUrl: 'https://developers.facebook.com/docs/threads',
+    setupSteps: [
+      'Connect your Threads/Instagram account',
+      'Authorize via Meta Login',
+      'DMs and replies sync to inbox',
+    ],
+  },
+];
+
 // ─── Component ──────────────────────────────────────────────────────────────────
 export default function InboxPage() {
   const [threads, setThreads] = useState<Thread[]>([]);
@@ -83,8 +189,14 @@ export default function InboxPage() {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [replyText, setReplyText] = useState('');
-  const [activeTab, setActiveTab] = useState<'inbox' | 'widget'>('inbox');
+  const [activeTab, setActiveTab] = useState<'inbox' | 'channels' | 'widget'>('inbox');
   const [copied, setCopied] = useState(false);
+
+  // Channel connections state
+  const [telegramToken, setTelegramToken] = useState('');
+  const [telegramSaving, setTelegramSaving] = useState(false);
+  const [telegramSaved, setTelegramSaved] = useState(false);
+  const [expandedSetup, setExpandedSetup] = useState<string | null>(null);
 
   // Create thread modal
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -135,6 +247,20 @@ export default function InboxPage() {
       console.error('Failed to disconnect WhatsApp:', err);
     } finally {
       setWaLoading(false);
+    }
+  };
+
+  const handleSaveTelegramToken = async () => {
+    if (!telegramToken.trim()) return;
+    try {
+      setTelegramSaving(true);
+      await api.post('/api/v1/inbox/channels/telegram/connect', { botToken: telegramToken });
+      setTelegramSaved(true);
+      setTimeout(() => setTelegramSaved(false), 3000);
+    } catch (err) {
+      console.error('Failed to save Telegram token:', err);
+    } finally {
+      setTelegramSaving(false);
     }
   };
 
@@ -307,6 +433,12 @@ export default function InboxPage() {
             💬 Inbox
           </button>
           <button
+            onClick={() => setActiveTab('channels')}
+            className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${activeTab === 'channels' ? 'bg-violet-600 text-white' : 'bg-slate-800 border border-slate-700 text-slate-400 hover:text-white'}`}
+          >
+            <Plug className="w-3 h-3" /> Channels
+          </button>
+          <button
             onClick={() => setActiveTab('widget')}
             className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'widget' ? 'bg-purple-600 text-white' : 'bg-slate-800 border border-slate-700 text-slate-400 hover:text-white'}`}
           >
@@ -339,6 +471,170 @@ export default function InboxPage() {
             <button onClick={copyScript} className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white font-semibold px-4 py-2 rounded-lg text-xs transition-all">
               {copied ? <><Check className="w-4 h-4 text-emerald-300" /> Copied!</> : <><Copy className="w-4 h-4" /> Copy Script</>}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Channels Tab ────────────────────────────────────────────────────── */}
+      {activeTab === 'channels' && (
+        <div className="space-y-5">
+          <div>
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <Plug className="w-4 h-4 text-violet-400" /> Channel Connections
+              <span className="text-[10px] bg-violet-500/20 text-violet-300 border border-violet-500/30 px-2 py-0.5 rounded-full">{CHANNEL_CARDS.length} Platforms</span>
+            </h2>
+            <p className="text-xs text-slate-500 mt-1">Connect your messaging accounts to receive and reply to all messages in one unified inbox.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {CHANNEL_CARDS.map((card) => {
+              const isExpanded = expandedSetup === card.key;
+              const isWA = card.key === 'WHATSAPP';
+              const isTelegram = card.key === 'TELEGRAM';
+              return (
+                <div
+                  key={card.key}
+                  className={`relative bg-gradient-to-br ${card.gradient} border border-slate-800 rounded-2xl p-5 space-y-3 transition-all hover:border-slate-700`}
+                >
+                  {card.popular && (
+                    <span className="absolute top-3 right-3 text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded-full">🔥 Popular</span>
+                  )}
+                  {/* Header */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 bg-slate-900/60 rounded-xl flex items-center justify-center text-2xl border border-slate-700/60">{card.emoji}</div>
+                    <div>
+                      <h3 className="text-sm font-bold text-white">{card.name}</h3>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        {isWA && waStatus === 'CONNECTED' ? (
+                          <span className="flex items-center gap-1 text-[10px] text-emerald-400"><CheckCircle2 className="w-3 h-3" /> Connected</span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-[10px] text-slate-500"><WifiOff className="w-3 h-3" /> Not connected</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {/* Description */}
+                  <p className="text-slate-400 text-[11px] leading-relaxed">{card.description}</p>
+                  {/* Setup Accordion */}
+                  <button
+                    onClick={() => setExpandedSetup(isExpanded ? null : card.key)}
+                    className="w-full flex items-center justify-between text-[11px] text-slate-400 hover:text-white transition-colors py-1 border-t border-slate-800"
+                  >
+                    <span className="flex items-center gap-1.5 pt-1"><Settings2 className="w-3 h-3" /> Setup Guide</span>
+                    <ChevronRight className={`w-3.5 h-3.5 mt-1 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                  </button>
+                  {isExpanded && (
+                    <div className="bg-slate-900/60 rounded-xl p-3 space-y-2 border border-slate-800">
+                      {card.setupSteps.map((step, i) => (
+                        <div key={i} className="flex items-start gap-2">
+                          <span className="w-4 h-4 rounded-full bg-violet-600/60 text-white text-[9px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+                          <p className="text-[11px] text-slate-300">{step}</p>
+                        </div>
+                      ))}
+                      {/* Telegram bot token input */}
+                      {isTelegram && (
+                        <div className="space-y-2 pt-2">
+                          <label className="text-[10px] text-slate-400 font-semibold">Bot Token from @BotFather</label>
+                          <input
+                            type="text"
+                            placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
+                            value={telegramToken}
+                            onChange={(e) => setTelegramToken(e.target.value)}
+                            className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-sky-500"
+                          />
+                          <button
+                            onClick={handleSaveTelegramToken}
+                            disabled={telegramSaving || !telegramToken.trim()}
+                            className="w-full bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white font-bold py-2 rounded-xl text-xs transition-all flex items-center justify-center gap-2"
+                          >
+                            {telegramSaving ? (
+                              <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Connecting...</>
+                            ) : telegramSaved ? (
+                              <><Check className="w-3.5 h-3.5 text-emerald-300" /> Token Saved!</>
+                            ) : (
+                              <><Link2 className="w-3.5 h-3.5" /> Connect Telegram Bot</>
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {/* Action Button */}
+                  <div className="flex gap-2">
+                    {isWA ? (
+                      <button
+                        onClick={() => { checkWhatsAppStatus(); setShowQrModal(true); }}
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5"
+                      >
+                        {waStatus === 'CONNECTED' ? <><CheckCircle2 className="w-3.5 h-3.5" /> Manage</> : <><Wifi className="w-3.5 h-3.5" /> Connect via QR</>}
+                      </button>
+                    ) : card.method === 'webhook' ? (
+                      <button
+                        onClick={() => setExpandedSetup(isExpanded ? null : card.key)}
+                        className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5"
+                      >
+                        <Settings2 className="w-3.5 h-3.5" /> Configure Webhook
+                      </button>
+                    ) : card.method === 'bot_token' ? (
+                      <button
+                        onClick={() => setExpandedSetup(isExpanded ? null : card.key)}
+                        className="flex-1 bg-sky-600 hover:bg-sky-500 text-white font-bold py-2 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5"
+                      >
+                        <Link2 className="w-3.5 h-3.5" /> Add Bot Token
+                      </button>
+                    ) : (
+                      <button
+                        className="flex-1 bg-violet-600 hover:bg-violet-500 text-white font-bold py-2 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5"
+                        onClick={() => card.helpUrl && window.open(card.helpUrl, '_blank')}
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" /> Connect via OAuth
+                      </button>
+                    )}
+                    {card.helpUrl && (
+                      <a
+                        href={card.helpUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-9 h-9 bg-slate-800 hover:bg-slate-700 rounded-xl flex items-center justify-center transition-all border border-slate-700"
+                        title="View docs"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Webhook Endpoints Reference */}
+          <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-5 space-y-3">
+            <h3 className="text-sm font-bold text-blue-300 flex items-center gap-2"><Code className="w-4 h-4" /> Webhook Endpoints</h3>
+            <p className="text-xs text-slate-400">Use these URLs when configuring webhooks in platform developer dashboards:</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {[
+                { label: 'Facebook / Messenger', url: 'https://flowsuite.amansuite.com/api/v1/webhook/facebook' },
+                { label: 'Instagram DM', url: 'https://flowsuite.amansuite.com/api/v1/webhook/instagram' },
+                { label: 'Telegram Bot', url: 'https://flowsuite.amansuite.com/api/v1/webhook/telegram' },
+                { label: 'TikTok', url: 'https://flowsuite.amansuite.com/api/v1/webhook/tiktok' },
+                { label: 'Threads', url: 'https://flowsuite.amansuite.com/api/v1/webhook/threads' },
+                { label: 'Web Chat Widget', url: 'https://flowsuite.amansuite.com/api/v1/inbox/webhook/incoming' },
+              ].map((w) => (
+                <div key={w.label} className="bg-slate-900/60 border border-slate-800 rounded-xl p-3 flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] text-slate-500 font-semibold">{w.label}</p>
+                    <p className="text-[11px] text-blue-300 font-mono truncate">{w.url}</p>
+                  </div>
+                  <button
+                    onClick={() => navigator.clipboard.writeText(w.url)}
+                    className="text-slate-500 hover:text-blue-400 transition-colors flex-shrink-0"
+                    title="Copy URL"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
