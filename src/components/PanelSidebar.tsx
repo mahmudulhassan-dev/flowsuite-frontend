@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Calendar, MessageSquare, Bot,
   FolderOpen, Send, Users, Wallet, Settings,
   Globe, ChevronLeft, ChevronRight, DollarSign, Gift, FileText, Lock,
-  Link2, QrCode, Wrench
+  Link2, QrCode, Wrench, BarChart3, BookOpen, ClipboardList
 } from 'lucide-react';
 
 import { useAuth } from '../lib/auth-context';
@@ -32,6 +32,9 @@ export default function PanelSidebar() {
     { name: 'Asset Manager', href: '/panel/assets', icon: FolderOpen, color: 'text-indigo-400' },
     { name: 'Marketing Suite', href: '/panel/marketing', icon: Send, color: 'text-blue-400' },
     { name: 'CRM & Contacts', href: '/panel/crm', icon: Users, color: 'text-purple-400' },
+    { name: 'Reports & Analytics', href: '/panel/reports', icon: BarChart3, color: 'text-indigo-400' },
+    { name: 'Knowledge Base', href: '/panel/knowledge-base', icon: BookOpen, color: 'text-emerald-400' },
+    { name: 'Surveys & NPS', href: '/panel/surveys', icon: ClipboardList, color: 'text-purple-400' },
     { name: 'Billing & Wallet', href: '/panel/billing', icon: Wallet, color: 'text-amber-400' },
     { name: 'Settings', href: '/panel/settings', icon: Settings, color: 'text-slate-400' },
     { name: 'Affiliate', href: '/affiliate', icon: DollarSign, color: 'text-emerald-400' },
