@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Wallet, Plus, ShieldCheck, Check, Coins, RefreshCw } from 'lucide-react';
+import { Wallet, Plus, ShieldCheck, Check, Coins, RefreshCw, HardDrive } from 'lucide-react';
 import { api } from '../../../lib/api';
 
 interface PlanDetails {
@@ -46,6 +46,18 @@ export default function BillingPage() {
       loadBillingDetails();
     } catch (err) {
       console.error('Failed to upgrade plan:', err);
+      setLoading(false);
+    }
+  };
+
+  const handleUpgradeStorage = async (sizeGb: number) => {
+    try {
+      setLoading(true);
+      await api.post('/api/v1/workspace/upgrade-storage', { sizeGb });
+      alert(`Success! Storage quota limit increased by ${sizeGb} GB!`);
+      loadBillingDetails();
+    } catch (err) {
+      console.error(err);
       setLoading(false);
     }
   };
@@ -115,6 +127,37 @@ export default function BillingPage() {
               >
                 Change Subscription Plan →
               </button>
+            </div>
+          </div>
+
+          {/* Cloud Storage Upgrades */}
+          <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 space-y-4">
+            <div>
+              <h3 className="text-sm font-bold text-white flex items-center gap-1.5"><HardDrive className="w-4 h-4 text-indigo-400" /> Upgrade Cloud Storage Capacity</h3>
+              <p className="text-slate-400 text-xs mt-0.5">Extend your workspace disk space to host large video, audio, and spreadsheet assets.</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+              {[
+                { size: 10, price: 499, desc: 'Ideal for small agencies' },
+                { size: 50, price: 1499, desc: 'Perfect for video publishers' },
+                { size: 100, price: 2499, desc: 'Enterprise scaling space' }
+              ].map(plan => (
+                <div key={plan.size} className="bg-slate-950 border border-slate-850 p-4 rounded-2xl flex flex-col justify-between space-y-3">
+                  <div>
+                    <h4 className="text-xs font-black text-white">{plan.size} GB Drive Plan</h4>
+                    <p className="text-[10px] text-slate-500 mt-0.5">{plan.desc}</p>
+                    <p className="text-lg font-black text-indigo-400 mt-2">৳{plan.price}<span className="text-[10px] text-slate-600 font-semibold">/month</span></p>
+                  </div>
+                  <button
+                    onClick={() => handleUpgradeStorage(plan.size)}
+                    disabled={loading}
+                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-xl text-[10px] transition"
+                  >
+                    Simulate Payment & Add Addon
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
         </div>
