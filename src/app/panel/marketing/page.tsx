@@ -81,7 +81,7 @@ export default function MarketingBroadcastPage() {
   // Builder State
   const [tempName, setTempName] = useState('');
   const [tempSubject, setTempSubject] = useState('');
-  const [tempHtml, setTempHtml] = useState('<html>\n<body>\n  <h1>Welcome!</h1>\n  <p>Thank you for choosing FlowSuite.</p>\n  <a href="https://flowsuite.amansuite.com/api/v1/marketing/tracking/click?campaignId=test&url=https://suite.amanasuite.com">Click Here</a>\n</body>\n</html>');
+  const [tempHtml, setTempHtml] = useState('<html>\n<body>\n  <h1>Welcome!</h1>\n  <p>Thank you for choosing FlowSuite.</p>\n  <a href="https://flowsuite.amanasuite.com/api/v1/marketing/tracking/click?campaignId=test&url=https://suite.amanasuite.com">Click Here</a>\n</body>\n</html>');
 
   const [aiPromptInput, setAiPromptInput] = useState('');
   const [aiGenerating, setAiGenerating] = useState(false);
@@ -195,7 +195,7 @@ export default function MarketingBroadcastPage() {
     <p>Dear customer,</p>
     <p>${aiPromptInput}</p>
     <p style="margin-top: 30px;">Best Regards,<br/>FlowSuite Team</p>
-    <img src="https://flowsuite.amansuite.com/api/v1/marketing/tracking/open?campaignId=demo" width="1" height="1" />
+    <img src="https://flowsuite.amanasuite.com/api/v1/marketing/tracking/open?campaignId=demo" width="1" height="1" />
   </div>
 </body>
 </html>`);
@@ -329,14 +329,14 @@ export default function MarketingBroadcastPage() {
               <div className="flex gap-1.5">
                 <button
                   type="button"
-                  onClick={() => setTempHtml(tempHtml + '\n<img src="https://flowsuite.amansuite.com/api/v1/marketing/tracking/open?campaignId=123" width="1" height="1" />')}
+                  onClick={() => setTempHtml(tempHtml + '\n<img src="https://flowsuite.amanasuite.com/api/v1/marketing/tracking/open?campaignId=123" width="1" height="1" />')}
                   className="text-[9px] bg-purple-500/10 text-purple-300 px-2 py-1 rounded border border-purple-500/30 font-bold"
                 >
                   + Add Open Pixel
                 </button>
                 <button
                   type="button"
-                  onClick={() => setTempHtml(tempHtml + '\n<a href="https://flowsuite.amansuite.com/api/v1/marketing/tracking/click?campaignId=123&url=YOUR_URL">Trackable Link</a>')}
+                  onClick={() => setTempHtml(tempHtml + '\n<a href="https://flowsuite.amanasuite.com/api/v1/marketing/tracking/click?campaignId=123&url=YOUR_URL">Trackable Link</a>')}
                   className="text-[9px] bg-blue-500/10 text-blue-300 px-2 py-1 rounded border border-blue-500/30 font-bold"
                 >
                   + Add Click URL
@@ -505,14 +505,14 @@ export default function MarketingBroadcastPage() {
                 <span className="font-extrabold text-purple-400">1. Open Tracking Pixel</span>
                 <p className="text-slate-400">A 1x1 transparent tracking image is appended at the bottom of the template HTML body:</p>
                 <code className="block bg-slate-950 p-2 rounded text-slate-400 font-mono mt-1 overflow-x-auto select-all">
-                  {'<img src="https://flowsuite.amansuite.com/api/v1/marketing/tracking/open?campaignId=CAMPAIGN_ID" width="1" height="1" />'}
+                  {'<img src="https://flowsuite.amanasuite.com/api/v1/marketing/tracking/open?campaignId=CAMPAIGN_ID" width="1" height="1" />'}
                 </code>
               </div>
               <div className="p-3 bg-slate-950/40 rounded-xl border border-slate-850 space-y-1">
                 <span className="font-extrabold text-blue-400">2. Link Redirection Tracking</span>
                 <p className="text-slate-400">URLs inside campaign templates are wrapped in tracking redirects:</p>
                 <code className="block bg-slate-950 p-2 rounded text-slate-400 font-mono mt-1 overflow-x-auto select-all">
-                  {'https://flowsuite.amansuite.com/api/v1/marketing/tracking/click?campaignId=CAMPAIGN_ID&url=https://YOUR_TARGET_URL'}
+                  {'https://flowsuite.amanasuite.com/api/v1/marketing/tracking/click?campaignId=CAMPAIGN_ID&url=https://YOUR_TARGET_URL'}
                 </code>
               </div>
             </div>

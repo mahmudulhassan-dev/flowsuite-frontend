@@ -471,7 +471,7 @@ export default function PublisherPage() {
                     <div className="w-full border border-slate-850 rounded-xl overflow-hidden">
                       <img src={mediaUrl} alt="LI preview" className="w-full aspect-video object-cover" />
                       <div className="p-3 bg-slate-900 border-t border-slate-850">
-                        <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">flowsuite.amansuite.com</span>
+                        <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">flowsuite.amanasuite.com</span>
                         <span className="font-bold text-white block mt-0.5">Automated Social Media Post</span>
                       </div>
                     </div>
