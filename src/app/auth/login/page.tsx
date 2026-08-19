@@ -270,15 +270,15 @@ export default function LoginPage() {
           </div>
 
           {/* Social Logins Buttons */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="flex justify-center gap-4 mt-2">
             <button
               type="button"
               onClick={() => handleSocialLogin('Google')}
-              className="flex items-center justify-center py-2.5 px-3 border border-slate-800/80 hover:border-slate-700 bg-slate-950/40 hover:bg-slate-950 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="w-11 h-11 flex items-center justify-center border border-slate-800/80 hover:border-slate-700 bg-slate-950/40 hover:bg-slate-950 rounded-full transition-all hover:scale-105 active:scale-95 shadow-inner"
               title="Sign in with Google"
               disabled={loading}
             >
-              <svg className="w-4.5 h-4.5" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path fill="#EA4335" d="M12 5.04c1.66 0 3.2.57 4.38 1.69l3.27-3.27C17.67 1.53 14.98 1 12 1 7.35 1 3.37 3.67 1.39 7.56l3.92 3.04c.94-2.82 3.58-4.96 6.69-4.96z"/>
                 <path fill="#4285F4" d="M23.49 12.27c0-.82-.07-1.6-.22-2.36H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.57l3.7 2.87c2.16-1.99 3.72-4.92 3.72-8.59z"/>
                 <path fill="#FBBC05" d="M5.31 10.6c-.24-.72-.37-1.5-.37-2.3s.13-1.58.37-2.3L1.39 2.96C.5 4.77 0 6.82 0 9s.5 4.23 1.39 6.04l3.92-3.04C5.18 11.28 5.18 10.92 5.31 10.6z"/>
@@ -289,11 +289,11 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => handleSocialLogin('Facebook')}
-              className="flex items-center justify-center py-2.5 px-3 border border-slate-800/80 hover:border-slate-700 bg-slate-950/40 hover:bg-slate-950 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="w-11 h-11 flex items-center justify-center border border-slate-800/80 hover:border-slate-700 bg-slate-950/40 hover:bg-slate-950 rounded-full transition-all hover:scale-105 active:scale-95 shadow-inner"
               title="Sign in with Facebook"
               disabled={loading}
             >
-              <svg className="w-4.5 h-4.5" viewBox="0 0 24 24" fill="#1877F2">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#1877F2">
                 <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
               </svg>
             </button>
@@ -301,11 +301,11 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => handleSocialLogin('Apple')}
-              className="flex items-center justify-center py-2.5 px-3 border border-slate-800/80 hover:border-slate-700 bg-slate-950/40 hover:bg-slate-950 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="w-11 h-11 flex items-center justify-center border border-slate-800/80 hover:border-slate-700 bg-slate-950/40 hover:bg-slate-950 rounded-full transition-all hover:scale-105 active:scale-95 shadow-inner"
               title="Sign in with Apple"
               disabled={loading}
             >
-              <svg className="w-4.5 h-4.5" viewBox="0 0 24 24" fill="#FFFFFF">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#FFFFFF">
                 <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.05-2.029.03-3.897 1.18-4.937 3.002-2.1 3.678-.54 9.117 1.5 12.076 1.002 1.449 2.176 3.067 3.738 3.007 1.503-.06 2.074-.969 3.889-.969 1.802 0 2.33.969 3.89.939 1.602-.03 2.628-1.469 3.612-2.909 1.138-1.666 1.604-3.275 1.63-3.365-.05-.03-3.136-1.205-3.167-4.789-.03-2.996 2.457-4.436 2.574-4.509-1.401-2.058-3.56-2.296-4.32-2.352-1.742-.14-3.447 1.05-3.447 1.05zM15.485 3.82c.767-.932 1.282-2.226 1.141-3.52-1.11.045-2.457.738-3.255 1.67-.687.794-1.29 2.1-1.121 3.375 1.238.096 2.467-.601 3.235-1.525z"/>
               </svg>
             </button>
