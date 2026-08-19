@@ -121,11 +121,11 @@ export default function AssetsPage() {
   const [alignCells, setAlignCells] = useState<Record<string, 'left' | 'center' | 'right'>>({});
 
   // Monetization Simulator states
-  const [monetizeSaaSName, setMonetizeSaaSName] = useState('My Workspace Drive');
+  const [monetizeSaaSName, setMonetizeSaaSName] = useState('FS3 Drive');
   const [cnameDomain, setCnameDomain] = useState('drive.mybrand.com');
   const [pricingStarter, setPricingStarter] = useState('9.99');
   const [pricingPro, setPricingPro] = useState('29.99');
-  const [storageEngine, setStorageEngine] = useState<'local' | 's3' | 'r2'>('local');
+  const [storageEngine, setStorageEngine] = useState<'local' | 's3' | 'r2' | 'gcs' | 'azure' | 'ftp'>('local');
   const [encryptionEnabled, setEncryptionEnabled] = useState(false);
   const [bandwidthLimit, setBandwidthLimit] = useState('100');
 
@@ -200,7 +200,7 @@ export default function AssetsPage() {
     
     const fetchSpreadsheetContent = async () => {
       try {
-        const fileUrl = `https://flowsuite.amanasuite.com${activeSpreadsheetAsset.fileUrl}`;
+        const fileUrl = getMediaUrl(activeSpreadsheetAsset.fileUrl);
         const response = await fetch(fileUrl);
         const text = await response.text();
         
@@ -249,7 +249,7 @@ export default function AssetsPage() {
 
     const img = new window.Image();
     img.crossOrigin = 'anonymous';
-    img.src = `https://flowsuite.amanasuite.com${editingAsset.fileUrl}`;
+    img.src = getMediaUrl(editingAsset.fileUrl);
     
     img.onload = () => {
       canvas.width = img.naturalWidth;
@@ -587,6 +587,12 @@ export default function AssetsPage() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
+  const getMediaUrl = (url: string) => {
+    if (!url) return '';
+    const encodedPath = url.split('/').map(segment => encodeURIComponent(segment)).join('/');
+    return `https://flowsuite.amanasuite.com${encodedPath}`;
+  };
+
   const getFilteredAssets = () => {
     return assets.filter(a => {
       const matchesSearch = a.fileName.toLowerCase().includes(search.toLowerCase());
@@ -694,7 +700,7 @@ export default function AssetsPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          {['drive', 'monetization', 'features'].map((tab) => (
+          {['drive', 'monetization'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveWorkspaceTab(tab as any)}
@@ -704,7 +710,7 @@ export default function AssetsPage() {
                   : 'bg-slate-850 hover:bg-slate-800 text-slate-400 border border-slate-800'
               }`}
             >
-              {tab === 'drive' ? '📂 Drive Explorer' : tab === 'monetization' ? '💰 Monetize & SaaS Settings' : '🚀 50+ Premium Features'}
+              {tab === 'drive' ? '📂 Drive Explorer' : '💰 Monetize & SaaS Settings'}
             </button>
           ))}
         </div>
@@ -982,7 +988,7 @@ export default function AssetsPage() {
                     >
                       {asset.fileType === 'image' ? (
                         <img 
-                          src={`https://flowsuite.amanasuite.com${asset.fileUrl}`} 
+                          src={getMediaUrl(asset.fileUrl)} 
                           alt={asset.fileName}
                           className="w-full h-full object-cover transition-transform group-hover/preview:scale-105"
                         />
@@ -1019,7 +1025,7 @@ export default function AssetsPage() {
 
                       <div className="flex gap-1.5 pt-1 relative">
                         <a 
-                          href={`https://flowsuite.amanasuite.com${asset.fileUrl}`}
+                          href={getMediaUrl(asset.fileUrl)}
                           download={asset.fileName}
                           target="_blank"
                           rel="noreferrer"
@@ -1171,7 +1177,7 @@ export default function AssetsPage() {
                         </td>
                         <td className="p-3 flex gap-1.5">
                           <a 
-                            href={`https://flowsuite.amanasuite.com${asset.fileUrl}`}
+                            href={getMediaUrl(asset.fileUrl)}
                             download={asset.fileName}
                             target="_blank"
                             className="bg-slate-850 hover:bg-slate-800 px-3 py-1.5 rounded-lg text-slate-300 flex items-center gap-1 border border-slate-800"
@@ -1266,9 +1272,12 @@ export default function AssetsPage() {
                     <label className="text-[11px] font-semibold text-slate-400">Active Storage Provider Engine</label>
                     <div className="grid grid-cols-3 gap-2">
                       {[
-                        { key: 'local', label: 'Local Server' },
+                        { key: 'local', label: 'FS3 (Local Server)' },
                         { key: 's3', label: 'AWS S3 Bucket' },
-                        { key: 'r2', label: 'Cloudflare R2' }
+                        { key: 'r2', label: 'Cloudflare R2' },
+                        { key: 'gcs', label: 'Google Cloud Storage' },
+                        { key: 'azure', label: 'Microsoft Azure Blob' },
+                        { key: 'ftp', label: 'FTP / SFTP Server' }
                       ].map((prov) => (
                         <button
                           key={prov.key}
@@ -1359,39 +1368,7 @@ export default function AssetsPage() {
         </div>
       )}
 
-      {/* ── 50+ Premium Features Tab ── */}
-      {activeWorkspaceTab === 'features' && (
-        <div className="space-y-5">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-900/60 border border-slate-800 rounded-2xl p-4">
-            <div>
-              <h2 className="text-sm font-bold text-white">Interactive Features Catalog ({all50Features.length})</h2>
-              <p className="text-[10px] text-slate-500 mt-0.5">Explore premium features baked into this Drive & Sheets Workspace SaaS wrapper.</p>
-            </div>
-            <div className="relative w-full md:w-64">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search features..."
-                value={featureSearch}
-                onChange={e => setFeatureSearch(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white focus:outline-none"
-              />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-            {filtered50Features.map((feat, idx) => (
-              <div key={idx} className="bg-slate-900/40 border border-slate-855 hover:border-slate-800 rounded-2xl p-4 space-y-1.5 transition-colors">
-                <span className="text-[10px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded-full font-mono font-bold">
-                  Feature #{idx + 1}
-                </span>
-                <h3 className="text-xs font-bold text-white pt-1">{feat.name}</h3>
-                <p className="text-[11px] text-slate-400 leading-relaxed">{feat.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* NEW FOLDER DIALOG */}
       {showFolderModal && (
@@ -1559,7 +1536,7 @@ export default function AssetsPage() {
               >
                 <video
                   ref={videoRef}
-                  src={`https://flowsuite.amanasuite.com${activeVideoAsset.fileUrl}`}
+                  src={getMediaUrl(activeVideoAsset.fileUrl)}
                   className="w-full h-full object-contain"
                   controls={false}
                   playsInline
@@ -1686,7 +1663,7 @@ export default function AssetsPage() {
                   <p className="text-[9px] text-slate-500 uppercase font-black">Troubleshoot</p>
                   <p className="text-[10px] text-slate-400 leading-normal">If video playback fails to load due to browser codecs, you can download the video directly to play locally.</p>
                   <a 
-                    href={`https://flowsuite.amanasuite.com${activeVideoAsset.fileUrl}`} download
+                    href={getMediaUrl(activeVideoAsset.fileUrl)} download
                     className="text-[9px] text-indigo-400 font-bold hover:underline block"
                   >
                     Direct video download link
