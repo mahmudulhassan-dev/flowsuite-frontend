@@ -1563,7 +1563,6 @@ export default function AssetsPage() {
                   className="w-full h-full object-contain"
                   controls={false}
                   playsInline
-                  crossOrigin="anonymous"
                 />
                 
                 {/* Visual state icon overlay */}
