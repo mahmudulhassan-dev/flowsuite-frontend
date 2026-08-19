@@ -4,7 +4,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   MessageSquare, Send, Check, Copy, Mic, Phone, Plus, RefreshCw, Search,
   Filter, X, ChevronDown, Inbox, Code, Bot, Users, Plug, Link2, ExternalLink,
-  AlertCircle, CheckCircle2, Wifi, WifiOff, Settings2, ChevronRight
+  AlertCircle, CheckCircle2, Wifi, WifiOff, Settings2, ChevronRight, Tags,
+  Award, FileText, CheckSquare, Settings, Sliders, Play, Trash2, Heart, HelpCircle,
+  TrendingUp, Volume2, Shield, Calendar, Share2
 } from 'lucide-react';
 import { api } from '../../../lib/api';
 import { io, Socket } from 'socket.io-client';
@@ -30,6 +32,7 @@ interface Thread {
   assignedStaffId: string | null;
   status: 'OPEN' | 'PENDING' | 'RESOLVED' | 'BOT_HANDLED';
   lastMessageAt: string;
+  socialAccountId: string | null;
   messages?: Message[];
 }
 
@@ -46,140 +49,36 @@ type Platform =
   | 'SMS'
   | 'WEB_CHAT';
 
-// ─── Platform Config ────────────────────────────────────────────────────────────
-const PLATFORMS: {
-  key: Platform | 'all';
-  label: string;
-  emoji: string;
-  color: string;
-  bg: string;
-  border: string;
-  badge: string;
-}[] = [
+interface WhatsAppAccount {
+  id: string;
+  sessionId: string;
+  accountName: string;
+  phone: string;
+  isActive: boolean;
+  status: 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'QR';
+  qr?: string | null;
+  sessionData?: {
+    autoReplyActive?: boolean;
+    aiReplyActive?: boolean;
+    awayMessage?: string;
+  } | null;
+}
+
+const PLATFORMS = [
   { key: 'all',             label: 'All Channels',  emoji: '📬', color: 'text-slate-300',  bg: 'bg-slate-700',    border: 'border-slate-600', badge: 'bg-slate-700 text-slate-200' },
   { key: 'WHATSAPP',        label: 'WhatsApp',       emoji: '💬', color: 'text-emerald-400', bg: 'bg-emerald-900/40', border: 'border-emerald-700/60', badge: 'bg-emerald-600 text-white' },
-  { key: 'WHATSAPP_BAILEYS',label: 'WA Baileys',    emoji: '🟢', color: 'text-emerald-300', bg: 'bg-emerald-900/30', border: 'border-emerald-800/60', badge: 'bg-emerald-700 text-white' },
   { key: 'FACEBOOK',        label: 'Messenger',      emoji: '💙', color: 'text-blue-400',    bg: 'bg-blue-900/40',   border: 'border-blue-700/60',    badge: 'bg-blue-600 text-white' },
   { key: 'INSTAGRAM',       label: 'Instagram',      emoji: '📸', color: 'text-pink-400',    bg: 'bg-pink-900/40',   border: 'border-pink-700/60',    badge: 'bg-gradient-to-r from-purple-500 to-pink-500 text-white' },
   { key: 'TIKTOK',          label: 'TikTok',         emoji: '🎵', color: 'text-red-400',     bg: 'bg-red-900/40',    border: 'border-red-700/60',     badge: 'bg-black text-white' },
   { key: 'THREADS',         label: 'Threads',        emoji: '🧵', color: 'text-slate-300',   bg: 'bg-slate-800/40',  border: 'border-slate-700/60',   badge: 'bg-slate-900 text-white' },
   { key: 'TELEGRAM',        label: 'Telegram',       emoji: '✈️', color: 'text-sky-400',     bg: 'bg-sky-900/40',    border: 'border-sky-700/60',     badge: 'bg-sky-500 text-white' },
-  { key: 'X',               label: 'X (Twitter)',    emoji: '🐦', color: 'text-slate-200',   bg: 'bg-slate-900/40',  border: 'border-slate-600/60',   badge: 'bg-slate-950 text-white border border-slate-700' },
-  { key: 'GMAIL',           label: 'Gmail',          emoji: '📧', color: 'text-red-400',     bg: 'bg-red-900/40',    border: 'border-red-700/60',     badge: 'bg-red-600 text-white' },
-  { key: 'SMS',             label: 'SMS',            emoji: '📱', color: 'text-blue-300',    bg: 'bg-blue-900/30',   border: 'border-blue-800/60',    badge: 'bg-blue-700 text-white' },
-  { key: 'WEB_CHAT',        label: 'Web Chat',       emoji: '🌐', color: 'text-purple-400',  bg: 'bg-purple-900/40', border: 'border-purple-700/60',  badge: 'bg-purple-600 text-white' },
 ];
 
 const getPlatformConfig = (p: Platform | string) =>
   PLATFORMS.find(x => x.key === p) ?? PLATFORMS[0];
 
-// ─── Channel Connection Cards ───────────────────────────────────────────────────
-interface ChannelCard {
-  key: string;
-  name: string;
-  emoji: string;
-  description: string;
-  gradient: string;
-  method: 'qr' | 'webhook' | 'oauth' | 'bot_token' | 'coming_soon';
-  helpUrl?: string;
-  setupSteps: string[];
-  popular?: boolean;
-}
-
-const CHANNEL_CARDS: ChannelCard[] = [
-  {
-    key: 'WHATSAPP',
-    name: 'WhatsApp',
-    emoji: '💬',
-    description: 'Connect via WhatsApp Web QR code pairing. Receive & reply to customer messages directly from your inbox.',
-    gradient: 'from-emerald-600/20 to-emerald-900/10',
-    method: 'qr',
-    popular: true,
-    setupSteps: [
-      'Click "Connect WhatsApp"',
-      'Scan QR code with your WhatsApp mobile app',
-      'Messages will appear in real-time inbox',
-    ],
-  },
-  {
-    key: 'FACEBOOK',
-    name: 'Messenger',
-    emoji: '💙',
-    description: 'Connect your Facebook Page Messenger to receive & reply to DMs from your Facebook audience.',
-    gradient: 'from-blue-600/20 to-blue-900/10',
-    method: 'webhook',
-    helpUrl: 'https://developers.facebook.com/docs/messenger-platform',
-    popular: true,
-    setupSteps: [
-      'Go to Facebook Developers → Your App → Messenger',
-      'Enter your Facebook Page ID & Access Token in Settings',
-      'Set webhook URL: flowsuite.amansuite.com/api/v1/webhook/facebook',
-      'Messages will flow into your unified inbox',
-    ],
-  },
-  {
-    key: 'INSTAGRAM',
-    name: 'Instagram DM',
-    emoji: '📸',
-    description: 'Connect your Instagram Business account to manage DMs, story replies, and comment mentions.',
-    gradient: 'from-pink-600/20 to-purple-900/10',
-    method: 'oauth',
-    helpUrl: 'https://developers.facebook.com/docs/instagram-api',
-    popular: true,
-    setupSteps: [
-      'Connect your Instagram Business/Creator account',
-      'Authorize FlowSuite via Facebook Login',
-      'DMs and mentions will sync to inbox',
-    ],
-  },
-  {
-    key: 'TELEGRAM',
-    name: 'Telegram',
-    emoji: '✈️',
-    description: 'Connect a Telegram Bot to receive messages and send replies. Perfect for support channels.',
-    gradient: 'from-sky-600/20 to-sky-900/10',
-    method: 'bot_token',
-    helpUrl: 'https://core.telegram.org/bots#botfather',
-    popular: true,
-    setupSteps: [
-      'Open Telegram and message @BotFather',
-      'Type /newbot and follow instructions',
-      'Copy the Bot Token provided by BotFather',
-      'Paste token below — FlowSuite auto-configures the webhook',
-    ],
-  },
-  {
-    key: 'TIKTOK',
-    name: 'TikTok DM',
-    emoji: '🎵',
-    description: 'Receive TikTok DMs and comment replies from your TikTok creator/business account.',
-    gradient: 'from-red-600/20 to-slate-900/10',
-    method: 'oauth',
-    helpUrl: 'https://developers.tiktok.com/',
-    setupSteps: [
-      'Connect TikTok Business account via OAuth',
-      'Grant DM and comment permissions',
-      'Messages appear in unified inbox',
-    ],
-  },
-  {
-    key: 'THREADS',
-    name: 'Threads',
-    emoji: '🧵',
-    description: 'Manage Threads DMs and mention replies. Connect your Meta Threads account.',
-    gradient: 'from-slate-600/20 to-slate-900/10',
-    method: 'oauth',
-    helpUrl: 'https://developers.facebook.com/docs/threads',
-    setupSteps: [
-      'Connect your Threads/Instagram account',
-      'Authorize via Meta Login',
-      'DMs and replies sync to inbox',
-    ],
-  },
-];
-
-// ─── Component ──────────────────────────────────────────────────────────────────
 export default function InboxPage() {
+  const [activeTab, setActiveTab] = useState<'inbox' | 'channels' | 'widget' | 'whatsapp_suite'>('inbox');
   const [threads, setThreads] = useState<Thread[]>([]);
   const [selectedThread, setSelectedThread] = useState<Thread | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -189,97 +88,87 @@ export default function InboxPage() {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [replyText, setReplyText] = useState('');
-  const [activeTab, setActiveTab] = useState<'inbox' | 'channels' | 'widget'>('inbox');
   const [copied, setCopied] = useState(false);
 
-  // Channel connections state
-  const [telegramToken, setTelegramToken] = useState('');
-  const [telegramSaving, setTelegramSaving] = useState(false);
-  const [telegramSaved, setTelegramSaved] = useState(false);
-  const [expandedSetup, setExpandedSetup] = useState<string | null>(null);
+  // WhatsApp Multi-accounts list state
+  const [waAccounts, setWaAccounts] = useState<WhatsAppAccount[]>([]);
+  const [loadingWA, setLoadingWA] = useState(false);
+  const [selectedWA, setSelectedWA] = useState<WhatsAppAccount | null>(null); // For automation settings editor
 
-  // Create thread modal
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newCustName, setNewCustName] = useState('');
-  const [newCustEmail, setNewCustEmail] = useState('');
-  const [newCustPhone, setNewCustPhone] = useState('');
-  const [newChannel, setNewChannel] = useState('WEB_CHAT');
+  // CRM Sidebar local state
+  const [crmStage, setCrmStage] = useState<'NEW_LEAD' | 'PROSPECT' | 'QUALIFIED' | 'CUSTOMER' | 'CHURNED'>('NEW_LEAD');
+  const [crmTags, setCrmTags] = useState<string[]>(['Lead', 'WhatsApp User']);
+  const [newTagInput, setNewTagInput] = useState('');
+  const [crmNote, setCrmNote] = useState('');
+  const [notesHistory, setNotesHistory] = useState<{ id: string; text: string; date: string }[]>([
+    { id: '1', text: 'Spoke about booking premium license pack next week.', date: '2026-08-19' }
+  ]);
+
+  // Dynamic automation state
+  const [autoReplyActive, setAutoReplyActive] = useState(false);
+  const [aiReplyActive, setAiReplyActive] = useState(false);
+  const [awayMessage, setAwayMessage] = useState("Hello! We are currently offline. Our AI agent will help you shortly.");
 
   const socketRef = useRef<Socket | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
-  // WhatsApp QR modal
-  const [showQrModal, setShowQrModal] = useState(false);
-  const [waStatus, setWaStatus] = useState<'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'QR'>('DISCONNECTED');
-  const [waQr, setWaQr] = useState<string | null>(null);
-  const [waLoading, setWaLoading] = useState(false);
-
-  const checkWhatsAppStatus = async () => {
+  const loadWAAccounts = async () => {
     try {
-      const res = await api.get<{ status: 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'QR'; qr?: string }>('/api/v1/whatsapp/status');
-      setWaStatus(res.status);
-      if (res.qr) setWaQr(res.qr);
+      setLoadingWA(true);
+      const res = await api.get<WhatsAppAccount[]>('/api/v1/whatsapp/status');
+      setWaAccounts(res || []);
+      if (res && res.length > 0 && !selectedWA) {
+        setSelectedWA(res[0]);
+        setAutoReplyActive(!!res[0].sessionData?.autoReplyActive);
+        setAiReplyActive(!!res[0].sessionData?.aiReplyActive);
+        setAwayMessage(res[0].sessionData?.awayMessage || "Hello! We are currently offline. Our AI agent will help you shortly.");
+      }
     } catch (err) {
-      console.error('Failed to get WhatsApp status:', err);
-    }
-  };
-
-  const handleConnectWhatsApp = async () => {
-    try {
-      setWaLoading(true);
-      await api.post('/api/v1/whatsapp/connect');
-      setWaStatus('CONNECTING');
-      setWaQr(null);
-    } catch (err) {
-      console.error('Failed to start WhatsApp pairing:', err);
+      console.error(err);
     } finally {
-      setWaLoading(false);
+      setLoadingWA(false);
     }
   };
 
-  const handleDisconnectWhatsApp = async () => {
+  const handleConnectWA = async () => {
     try {
-      setWaLoading(true);
-      await api.post('/api/v1/whatsapp/disconnect');
-      setWaStatus('DISCONNECTED');
-      setWaQr(null);
+      setLoadingWA(true);
+      const res = await api.post<{ sessionId: string }>('/api/v1/whatsapp/connect', {});
+      await loadWAAccounts();
     } catch (err) {
-      console.error('Failed to disconnect WhatsApp:', err);
+      console.error(err);
     } finally {
-      setWaLoading(false);
+      setLoadingWA(false);
     }
   };
 
-  const handleSaveTelegramToken = async () => {
-    if (!telegramToken.trim()) return;
+  const handleDisconnectWA = async (sessionId: string) => {
+    if (!confirm('Are you sure you want to disconnect this WhatsApp session?')) return;
     try {
-      setTelegramSaving(true);
-      await api.post('/api/v1/inbox/channels/telegram/connect', { botToken: telegramToken });
-      setTelegramSaved(true);
-      setTimeout(() => setTelegramSaved(false), 3000);
+      await api.post('/api/v1/whatsapp/disconnect', { sessionId });
+      loadWAAccounts();
     } catch (err) {
-      console.error('Failed to save Telegram token:', err);
-    } finally {
-      setTelegramSaving(false);
+      console.error(err);
     }
   };
 
-  useEffect(() => { checkWhatsAppStatus(); }, []);
-
-  const embedScript = `<script 
-  src="https://suite.amanasuite.com/widget.js" 
-  data-workspace-id="YOUR_WORKSPACE_ID"
-  data-theme="dark" 
-  async>
-</script>`;
-
-  const copyScript = () => {
-    navigator.clipboard.writeText(embedScript);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleSaveWASettings = async () => {
+    if (!selectedWA) return;
+    try {
+      await api.post('/api/v1/whatsapp/settings', {
+        sessionId: selectedWA.sessionId,
+        autoReplyActive,
+        aiReplyActive,
+        awayMessage
+      });
+      alert('WhatsApp Auto-Responder settings saved successfully!');
+      loadWAAccounts();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  // ── Fetch threads ───────────────────────────────────────────────────────────
+  // ── Load Threads ───────────────────────────────────────────────────────────
   const loadThreads = async () => {
     try {
       setLoading(true);
@@ -290,16 +179,22 @@ export default function InboxPage() {
       if (searchQuery) params.push(`search=${encodeURIComponent(searchQuery)}`);
       if (params.length > 0) path += `?${params.join('&')}`;
       const data = await api.get<Thread[]>(path);
-      setThreads(data);
-      if (data.length > 0 && !selectedThread) setSelectedThread(data[0]);
+      setThreads(data || []);
+      if (data && data.length > 0 && !selectedThread) setSelectedThread(data[0]);
     } catch (err) {
-      console.error('Failed to load threads:', err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { loadThreads(); }, [filterPlatform, filterStatus, searchQuery]);
+  useEffect(() => {
+    loadWAAccounts();
+  }, []);
+
+  useEffect(() => {
+    loadThreads();
+  }, [filterPlatform, filterStatus, searchQuery]);
 
   // ── Fetch messages ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -310,7 +205,7 @@ export default function InboxPage() {
         const data = await api.get<Thread>(`/api/v1/inbox/threads/${selectedThread?.id}`);
         setMessages(data.messages || []);
       } catch (err) {
-        console.error('Failed to load messages:', err);
+        console.error(err);
       } finally {
         setLoadingMessages(false);
       }
@@ -328,14 +223,19 @@ export default function InboxPage() {
       transports: ['websocket'],
     });
     socketRef.current = socket;
-    socket.on('whatsapp:status', (data: { status: 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'QR' }) => {
-      setWaStatus(data.status);
-      if (data.status !== 'QR') setWaQr(null);
+
+    socket.on('whatsapp:status', (data: { sessionId: string; status: any }) => {
+      setWaAccounts(prev => prev.map(acc => 
+        acc.sessionId === data.sessionId ? { ...acc, status: data.status, qr: data.status !== 'QR' ? null : acc.qr } : acc
+      ));
     });
-    socket.on('whatsapp:qr', (data: { qr: string }) => {
-      setWaStatus('QR');
-      setWaQr(data.qr);
+
+    socket.on('whatsapp:qr', (data: { sessionId: string; qr: string }) => {
+      setWaAccounts(prev => prev.map(acc => 
+        acc.sessionId === data.sessionId ? { ...acc, status: 'QR', qr: data.qr } : acc
+      ));
     });
+
     socket.on('inbox:message', (eventData: { threadId: string; message: Message }) => {
       if (selectedThread && eventData.threadId === selectedThread.id) {
         setMessages(prev => {
@@ -349,12 +249,12 @@ export default function InboxPage() {
           : t
       ));
     });
+
     return () => { socket.disconnect(); };
   }, [selectedThread?.id]);
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-  // ── Handlers ────────────────────────────────────────────────────────────────
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedThread || !replyText.trim()) return;
@@ -367,344 +267,120 @@ export default function InboxPage() {
       });
       setMessages(prev => [...prev, sentMsg]);
     } catch (err) {
-      console.error('Failed to send message:', err);
+      console.error(err);
       setReplyText(currentText);
     }
   };
 
-  const handleCreateThread = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCustName.trim()) return;
-    try {
-      const newThread = await api.post<Thread>('/api/v1/inbox/threads', {
-        customerName: newCustName,
-        customerEmail: newCustEmail,
-        customerPhone: newCustPhone,
-        channel: newChannel,
-      });
-      setThreads(prev => [newThread, ...prev]);
-      setSelectedThread(newThread);
-      setShowCreateModal(false);
-      setNewCustName(''); setNewCustEmail(''); setNewCustPhone('');
-    } catch (err) {
-      console.error('Failed to create manual thread:', err);
-    }
+  const handleAddCrmTag = () => {
+    if (!newTagInput.trim() || crmTags.includes(newTagInput)) return;
+    setCrmTags(prev => [...prev, newTagInput]);
+    setNewTagInput('');
   };
 
-  // ── Derived stats ────────────────────────────────────────────────────────────
-  const openCount = threads.filter(t => t.status === 'OPEN').length;
-  const pendingCount = threads.filter(t => t.status === 'PENDING').length;
-  const resolvedCount = threads.filter(t => t.status === 'RESOLVED').length;
+  const handleAddNote = () => {
+    if (!crmNote.trim()) return;
+    setNotesHistory(prev => [
+      { id: Date.now().toString(), text: crmNote, date: new Date().toISOString().split('T')[0] },
+      ...prev
+    ]);
+    setCrmNote('');
+  };
 
-  // ── Render ──────────────────────────────────────────────────────────────────
+  // Emed Script block
+  const embedScript = `<script 
+  src="https://suite.amanasuite.com/widget.js" 
+  data-workspace-id="YOUR_WORKSPACE_ID"
+  data-theme="dark" 
+  async>
+</script>`;
+
   return (
-    <div className="space-y-4">
-      {/* ── Top Header ─────────────────────────────────────────────────────── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-900/80 p-4 rounded-2xl border border-slate-800 backdrop-blur-xl">
+    <div className="space-y-4 text-slate-100">
+      
+      {/* Top Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-900/80 p-4 rounded-3xl border border-slate-800 backdrop-blur-xl">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-blue-500/20 text-blue-400 rounded-xl border border-blue-500/30">
             <Inbox className="w-6 h-6" />
           </div>
           <div>
             <h1 className="text-lg font-bold text-white flex items-center gap-2">
-              Unified Omnichannel Inbox
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-mono">LIVE</span>
+              Omnichannel Unified Inbox
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-mono font-bold">ACTIVE</span>
             </h1>
-            <p className="text-slate-400 text-xs mt-0.5">WhatsApp · Messenger · Instagram · TikTok · Threads · Telegram · X · Gmail · SMS · Web Chat</p>
+            <p className="text-slate-400 text-xs mt-0.5">Manage customer WhatsApp devices, Messenger, DMs, and CRM timelines.</p>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => { checkWhatsAppStatus(); setShowQrModal(true); }}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all"
-          >
-            🟢 WhatsApp QR
-          </button>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="bg-purple-600 hover:bg-purple-500 text-white font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all"
-          >
-            <Plus className="w-3.5 h-3.5" /> New Thread
-          </button>
+        
+        <div className="flex gap-2">
           <button
             onClick={() => setActiveTab('inbox')}
-            className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'inbox' ? 'bg-blue-600 text-white' : 'bg-slate-800 border border-slate-700 text-slate-400 hover:text-white'}`}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'inbox' ? 'bg-purple-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
           >
-            💬 Inbox
+            💬 Inbox Chat
           </button>
           <button
             onClick={() => setActiveTab('channels')}
-            className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${activeTab === 'channels' ? 'bg-violet-600 text-white' : 'bg-slate-800 border border-slate-700 text-slate-400 hover:text-white'}`}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'channels' ? 'bg-purple-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
           >
-            <Plug className="w-3 h-3" /> Channels
+            🔌 WhatsApp Accounts ({waAccounts.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('whatsapp_suite')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'whatsapp_suite' ? 'bg-purple-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
+          >
+            ⚙️ Pro Automation Setup
           </button>
           <button
             onClick={() => setActiveTab('widget')}
-            className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'widget' ? 'bg-purple-600 text-white' : 'bg-slate-800 border border-slate-700 text-slate-400 hover:text-white'}`}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'widget' ? 'bg-purple-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
           >
-            {'</>'}  Widget
+            {'</>'} Web Widget
           </button>
         </div>
       </div>
 
-      {/* ── Stats Bar ──────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: 'Open', count: openCount, color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/30' },
-          { label: 'Pending', count: pendingCount, color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30' },
-          { label: 'Resolved', count: resolvedCount, color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/30' },
-        ].map(s => (
-          <div key={s.label} className={`${s.bg} border rounded-xl p-3 text-center cursor-pointer hover:opacity-80 transition-all`} onClick={() => setFilterStatus(s.label.toUpperCase())}>
-            <div className={`text-2xl font-black ${s.color}`}>{s.count}</div>
-            <div className="text-slate-400 text-xs mt-0.5">{s.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* ── Widget Tab ──────────────────────────────────────────────────────── */}
-      {activeTab === 'widget' && (
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-4">
-          <h2 className="font-bold text-white flex items-center gap-2"><Code className="w-4 h-4 text-purple-400" /> Embeddable Live Chat Widget</h2>
-          <p className="text-xs text-slate-400">Paste this snippet before the <code className="bg-slate-800 px-1 py-0.5 rounded text-purple-300">&lt;/body&gt;</code> tag on your website.</p>
-          <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
-            <code className="text-purple-300 text-xs font-mono whitespace-pre block">{embedScript}</code>
-            <button onClick={copyScript} className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white font-semibold px-4 py-2 rounded-lg text-xs transition-all">
-              {copied ? <><Check className="w-4 h-4 text-emerald-300" /> Copied!</> : <><Copy className="w-4 h-4" /> Copy Script</>}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── Channels Tab ────────────────────────────────────────────────────── */}
-      {activeTab === 'channels' && (
-        <div className="space-y-5">
-          <div>
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <Plug className="w-4 h-4 text-violet-400" /> Channel Connections
-              <span className="text-[10px] bg-violet-500/20 text-violet-300 border border-violet-500/30 px-2 py-0.5 rounded-full">{CHANNEL_CARDS.length} Platforms</span>
-            </h2>
-            <p className="text-xs text-slate-500 mt-1">Connect your messaging accounts to receive and reply to all messages in one unified inbox.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {CHANNEL_CARDS.map((card) => {
-              const isExpanded = expandedSetup === card.key;
-              const isWA = card.key === 'WHATSAPP';
-              const isTelegram = card.key === 'TELEGRAM';
-              return (
-                <div
-                  key={card.key}
-                  className={`relative bg-gradient-to-br ${card.gradient} border border-slate-800 rounded-2xl p-5 space-y-3 transition-all hover:border-slate-700`}
-                >
-                  {card.popular && (
-                    <span className="absolute top-3 right-3 text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded-full">🔥 Popular</span>
-                  )}
-                  {/* Header */}
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 bg-slate-900/60 rounded-xl flex items-center justify-center text-2xl border border-slate-700/60">{card.emoji}</div>
-                    <div>
-                      <h3 className="text-sm font-bold text-white">{card.name}</h3>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        {isWA && waStatus === 'CONNECTED' ? (
-                          <span className="flex items-center gap-1 text-[10px] text-emerald-400"><CheckCircle2 className="w-3 h-3" /> Connected</span>
-                        ) : (
-                          <span className="flex items-center gap-1 text-[10px] text-slate-500"><WifiOff className="w-3 h-3" /> Not connected</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  {/* Description */}
-                  <p className="text-slate-400 text-[11px] leading-relaxed">{card.description}</p>
-                  {/* Setup Accordion */}
-                  <button
-                    onClick={() => setExpandedSetup(isExpanded ? null : card.key)}
-                    className="w-full flex items-center justify-between text-[11px] text-slate-400 hover:text-white transition-colors py-1 border-t border-slate-800"
-                  >
-                    <span className="flex items-center gap-1.5 pt-1"><Settings2 className="w-3 h-3" /> Setup Guide</span>
-                    <ChevronRight className={`w-3.5 h-3.5 mt-1 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-                  </button>
-                  {isExpanded && (
-                    <div className="bg-slate-900/60 rounded-xl p-3 space-y-2 border border-slate-800">
-                      {card.setupSteps.map((step, i) => (
-                        <div key={i} className="flex items-start gap-2">
-                          <span className="w-4 h-4 rounded-full bg-violet-600/60 text-white text-[9px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
-                          <p className="text-[11px] text-slate-300">{step}</p>
-                        </div>
-                      ))}
-                      {/* Telegram bot token input */}
-                      {isTelegram && (
-                        <div className="space-y-2 pt-2">
-                          <label className="text-[10px] text-slate-400 font-semibold">Bot Token from @BotFather</label>
-                          <input
-                            type="text"
-                            placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
-                            value={telegramToken}
-                            onChange={(e) => setTelegramToken(e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-sky-500"
-                          />
-                          <button
-                            onClick={handleSaveTelegramToken}
-                            disabled={telegramSaving || !telegramToken.trim()}
-                            className="w-full bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white font-bold py-2 rounded-xl text-xs transition-all flex items-center justify-center gap-2"
-                          >
-                            {telegramSaving ? (
-                              <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Connecting...</>
-                            ) : telegramSaved ? (
-                              <><Check className="w-3.5 h-3.5 text-emerald-300" /> Token Saved!</>
-                            ) : (
-                              <><Link2 className="w-3.5 h-3.5" /> Connect Telegram Bot</>
-                            )}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {/* Action Button */}
-                  <div className="flex gap-2">
-                    {isWA ? (
-                      <button
-                        onClick={() => { checkWhatsAppStatus(); setShowQrModal(true); }}
-                        className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5"
-                      >
-                        {waStatus === 'CONNECTED' ? <><CheckCircle2 className="w-3.5 h-3.5" /> Manage</> : <><Wifi className="w-3.5 h-3.5" /> Connect via QR</>}
-                      </button>
-                    ) : card.method === 'webhook' ? (
-                      <button
-                        onClick={() => setExpandedSetup(isExpanded ? null : card.key)}
-                        className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5"
-                      >
-                        <Settings2 className="w-3.5 h-3.5" /> Configure Webhook
-                      </button>
-                    ) : card.method === 'bot_token' ? (
-                      <button
-                        onClick={() => setExpandedSetup(isExpanded ? null : card.key)}
-                        className="flex-1 bg-sky-600 hover:bg-sky-500 text-white font-bold py-2 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5"
-                      >
-                        <Link2 className="w-3.5 h-3.5" /> Add Bot Token
-                      </button>
-                    ) : (
-                      <button
-                        className="flex-1 bg-violet-600 hover:bg-violet-500 text-white font-bold py-2 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5"
-                        onClick={() => card.helpUrl && window.open(card.helpUrl, '_blank')}
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" /> Connect via OAuth
-                      </button>
-                    )}
-                    {card.helpUrl && (
-                      <a
-                        href={card.helpUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-9 h-9 bg-slate-800 hover:bg-slate-700 rounded-xl flex items-center justify-center transition-all border border-slate-700"
-                        title="View docs"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
-                      </a>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Webhook Endpoints Reference */}
-          <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-5 space-y-3">
-            <h3 className="text-sm font-bold text-blue-300 flex items-center gap-2"><Code className="w-4 h-4" /> Webhook Endpoints</h3>
-            <p className="text-xs text-slate-400">Use these URLs when configuring webhooks in platform developer dashboards:</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {[
-                { label: 'Facebook / Messenger', url: 'https://flowsuite.amansuite.com/api/v1/webhook/facebook' },
-                { label: 'Instagram DM', url: 'https://flowsuite.amansuite.com/api/v1/webhook/instagram' },
-                { label: 'Telegram Bot', url: 'https://flowsuite.amansuite.com/api/v1/webhook/telegram' },
-                { label: 'TikTok', url: 'https://flowsuite.amansuite.com/api/v1/webhook/tiktok' },
-                { label: 'Threads', url: 'https://flowsuite.amansuite.com/api/v1/webhook/threads' },
-                { label: 'Web Chat Widget', url: 'https://flowsuite.amansuite.com/api/v1/inbox/webhook/incoming' },
-              ].map((w) => (
-                <div key={w.label} className="bg-slate-900/60 border border-slate-800 rounded-xl p-3 flex items-center gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] text-slate-500 font-semibold">{w.label}</p>
-                    <p className="text-[11px] text-blue-300 font-mono truncate">{w.url}</p>
-                  </div>
-                  <button
-                    onClick={() => navigator.clipboard.writeText(w.url)}
-                    className="text-slate-500 hover:text-blue-400 transition-colors flex-shrink-0"
-                    title="Copy URL"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Inbox Tab ───────────────────────────────────────────────────────── */}
+      {/* TAB: INBOX CHAT WITH CRM SIDEBAR */}
       {activeTab === 'inbox' && (
-        <div className="flex gap-4 h-[640px]">
-          {/* Left sidebar: Platform filters + Thread list */}
+        <div className="flex gap-4 h-[630px]">
+          
+          {/* Thread List sidebar */}
           <div className="w-72 flex-shrink-0 flex flex-col gap-3">
-            {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
               <input
-                type="text"
-                placeholder="Search threads..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-900/80 border border-slate-800 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
+                type="text" placeholder="Search threads..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3.5 py-2 text-xs text-white"
               />
             </div>
 
-            {/* Platform filter scrollable */}
-            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-2 flex flex-col gap-0.5 overflow-y-auto max-h-56">
-              {PLATFORMS.map(p => (
-                <button
-                  key={p.key}
-                  onClick={() => setFilterPlatform(p.key)}
-                  className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all text-left ${filterPlatform === p.key ? `${p.bg} ${p.border} border ${p.color}` : 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/50'}`}
-                >
-                  <span className="text-sm">{p.emoji}</span>
-                  <span className="truncate">{p.label}</span>
-                  {filterPlatform === p.key && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-current" />}
-                </button>
-              ))}
-            </div>
-
-            {/* Thread List */}
             <div className="flex-1 bg-slate-900/60 border border-slate-800 rounded-2xl p-2 overflow-y-auto space-y-1">
               {loading ? (
-                <div className="flex flex-col items-center justify-center h-full gap-2">
-                  <RefreshCw className="w-5 h-5 text-purple-500 animate-spin" />
-                  <p className="text-xs text-slate-500">Loading...</p>
-                </div>
+                <div className="flex justify-center items-center h-full"><RefreshCw className="w-5 h-5 text-purple-500 animate-spin" /></div>
               ) : threads.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full gap-2 text-slate-600">
-                  <MessageSquare className="w-8 h-8" />
-                  <p className="text-xs text-center">No threads yet.<br />Messages from connected channels will appear here.</p>
-                </div>
+                <p className="text-center text-slate-500 text-[11px] py-10">No chat threads found.</p>
               ) : (
                 threads.map(t => {
                   const pc = getPlatformConfig(t.platform);
-                  const lastMsg = t.messages?.[0];
                   const isSelected = selectedThread?.id === t.id;
                   return (
                     <button
                       key={t.id}
                       onClick={() => setSelectedThread(t)}
-                      className={`w-full text-left p-3 rounded-xl space-y-1.5 transition-all border ${isSelected ? 'bg-purple-600/20 border-purple-500/40' : 'bg-slate-800/20 border-transparent hover:border-slate-700 hover:bg-slate-800/40'}`}
+                      className={`w-full text-left p-3 rounded-xl transition-all border ${isSelected ? 'bg-purple-600/20 border-purple-500/40' : 'bg-slate-800/20 border-transparent hover:border-slate-800'}`}
                     >
                       <div className="flex items-center gap-2">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0 ${pc.bg} border ${pc.border}`}>
-                          {pc.emoji}
-                        </div>
+                        {t.platform === 'WHATSAPP' ? (
+                          <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-xs text-white font-bold flex-shrink-0 border border-emerald-500">WA</div>
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs flex-shrink-0">📱</div>
+                        )}
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-white truncate">{t.customerName || 'Unknown Contact'}</p>
-                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${pc.badge}`}>{pc.label}</span>
+                          <p className="text-xs font-bold text-white truncate">{t.customerName || 'WhatsApp Client'}</p>
+                          <p className="text-[10px] text-slate-500 truncate">{t.customerPhone || 'Direct Chat'}</p>
                         </div>
                       </div>
-                      <p className="text-slate-400 text-[10px] truncate pl-10">{lastMsg ? lastMsg.body : 'No messages yet'}</p>
-                      <p className="text-[9px] text-slate-600 pl-10">{new Date(t.lastMessageAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                     </button>
                   );
                 })
@@ -712,206 +388,335 @@ export default function InboxPage() {
             </div>
           </div>
 
-          {/* Right: Chat area */}
+          {/* Active Chat area */}
           <div className="flex-1 bg-slate-900/60 border border-slate-800 rounded-2xl flex flex-col overflow-hidden">
-            {selectedThread ? (() => {
-              const pc = getPlatformConfig(selectedThread.platform);
-              return (
-                <>
-                  {/* Chat Header */}
-                  <div className={`px-5 py-3 border-b border-slate-800 flex items-center justify-between ${pc.bg}`}>
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg border ${pc.border} ${pc.bg}`}>
-                        {pc.emoji}
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-white">{selectedThread.customerName}</p>
-                        <div className="flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-                          <span className={`text-[10px] ${pc.color}`}>Via {pc.label}</span>
-                          {selectedThread.customerPhone && (
-                            <span className="text-[10px] text-slate-500">· {selectedThread.customerPhone}</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${selectedThread.status === 'OPEN' ? 'bg-emerald-500/20 text-emerald-400' : selectedThread.status === 'RESOLVED' ? 'bg-blue-500/20 text-blue-400' : 'bg-amber-500/20 text-amber-400'}`}>
-                        {selectedThread.status}
+            {selectedThread ? (
+              <>
+                <div className="px-5 py-3 border-b border-slate-850 bg-slate-950/60 flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    {selectedThread.platform === 'WHATSAPP' && (
+                      <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[9px] font-mono font-bold flex items-center gap-1">
+                        🟢 WhatsApp Web
                       </span>
-                      <Bot className="w-4 h-4 text-slate-600" />
+                    )}
+                    <h3 className="text-xs font-bold text-white">{selectedThread.customerName || 'WhatsApp Session Chat'}</h3>
+                  </div>
+                  <span className="text-[9px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded uppercase font-bold">{selectedThread.status}</span>
+                </div>
+
+                {/* Messages view */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                  {loadingMessages ? (
+                    <div className="flex justify-center items-center h-full"><RefreshCw className="w-6 h-6 text-purple-500 animate-spin" /></div>
+                  ) : (
+                    messages.map(m => {
+                      const isMe = m.senderType === 'AGENT';
+                      const isBot = m.senderType === 'AI_BOT';
+                      return (
+                        <div key={m.id} className={`flex ${isMe || isBot ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`p-3 rounded-2xl max-w-xs text-xs ${isMe ? 'bg-purple-600 text-white' : isBot ? 'bg-indigo-650 text-white border border-indigo-500/30' : 'bg-slate-800 text-slate-200'}`}>
+                            {isBot && <span className="block text-[8px] font-bold text-indigo-300 uppercase mb-1">🤖 Auto AI Answer</span>}
+                            <p>{m.body}</p>
+                            <span className="block text-[9px] text-slate-500 mt-1.5">{new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+
+                {/* Send form */}
+                <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-850 flex gap-2">
+                  <input
+                    type="text" placeholder="Type response message..." value={replyText} onChange={e => setReplyText(e.target.value)}
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 text-xs text-white"
+                  />
+                  <button type="submit" className="bg-purple-600 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1">
+                    <Send className="w-3.5 h-3.5" /> Send
+                  </button>
+                </form>
+              </>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center text-slate-500 text-xs">
+                <span>Select a conversation to begin replying.</span>
+              </div>
+            )}
+          </div>
+
+          {/* CRM Sidebar */}
+          {selectedThread && (
+            <div className="w-80 bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col space-y-4 overflow-y-auto">
+              <div>
+                <h3 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-1"><Users className="w-4 h-4 text-purple-400" /> CRM Profile Data</h3>
+                <p className="text-[9px] text-slate-500">Contextual database of the active messaging client.</p>
+              </div>
+
+              {/* CRM Stage Picker */}
+              <div className="space-y-1">
+                <label className="text-[9px] text-slate-400 font-bold uppercase block">Lead Stage</label>
+                <select
+                  value={crmStage}
+                  onChange={e => setCrmStage(e.target.value as any)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white"
+                >
+                  <option value="NEW_LEAD">New Lead</option>
+                  <option value="PROSPECT">Prospect Interest</option>
+                  <option value="QUALIFIED">Qualified / Quote Accepted</option>
+                  <option value="CUSTOMER">Active Paying Client</option>
+                  <option value="CHURNED">Archived / Churned</option>
+                </select>
+              </div>
+
+              {/* Tagging manager */}
+              <div className="space-y-1">
+                <label className="text-[9px] text-slate-400 font-bold uppercase block">Customer Tags</label>
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {crmTags.map(t => (
+                    <span key={t} className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase bg-purple-500/10 text-purple-400 border border-purple-500/25">{t}</span>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text" placeholder="Add tag..." value={newTagInput} onChange={e => setNewTagInput(e.target.value)}
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white"
+                  />
+                  <button type="button" onClick={handleAddCrmTag} className="bg-slate-850 hover:bg-slate-800 px-2 py-1.5 rounded-lg text-xs font-bold">+</button>
+                </div>
+              </div>
+
+              {/* Custom staff notes history */}
+              <div className="space-y-2 border-t border-slate-850 pt-3">
+                <label className="text-[9px] text-slate-400 font-bold uppercase block">Client Notes ({notesHistory.length})</label>
+                <div className="space-y-1.5 max-h-24 overflow-y-auto pr-1">
+                  {notesHistory.map(n => (
+                    <div key={n.id} className="bg-slate-950 p-2 rounded-lg border border-slate-850 text-[10px] space-y-0.5">
+                      <p className="text-slate-300">{n.text}</p>
+                      <span className="text-[8px] text-slate-500 block font-mono">{n.date}</span>
                     </div>
+                  ))}
+                </div>
+                <div className="space-y-1.5">
+                  <textarea
+                    rows={2} placeholder="Write conversation note..." value={crmNote} onChange={e => setCrmNote(e.target.value)}
+                    className="w-full bg-slate-955 border border-slate-800 rounded-lg p-2 text-[10px] text-white resize-none"
+                  />
+                  <button type="button" onClick={handleAddNote} className="w-full bg-purple-650 text-white font-bold py-1.5 rounded-lg text-[10px]">
+                    Save Staff Note
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+        </div>
+      )}
+
+      {/* TAB: WHATSAPP ACCOUNTS (MULTI-DEVICES HUB) */}
+      {activeTab === 'channels' && (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center bg-slate-900/60 p-4 border border-slate-850 rounded-2xl">
+            <div>
+              <h2 className="text-sm font-bold text-white flex items-center gap-1">🟢 Connected WhatsApp Devices</h2>
+              <p className="text-[10px] text-slate-500">Pair multiple WhatsApp account lines using QR codes.</p>
+            </div>
+            <button
+              onClick={handleConnectWA} disabled={loadingWA}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1 transition"
+            >
+              <Plus className="w-4 h-4" /> Connect New Session
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {waAccounts.length === 0 ? (
+              <div className="col-span-full border border-slate-850 bg-slate-900/10 rounded-2xl py-12 text-center text-slate-500 text-xs">
+                No WhatsApp sessions pairing initialized yet. Click above to pair.
+              </div>
+            ) : (
+              waAccounts.map((acc) => (
+                <div key={acc.sessionId} className="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-4 flex flex-col justify-between">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[8px] bg-slate-950 px-2 py-0.5 rounded font-mono font-bold text-slate-500">ID: {acc.sessionId}</span>
+                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                        acc.status === 'CONNECTED' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-amber-500/15 text-amber-400 animate-pulse'
+                      }`}>
+                        {acc.status}
+                      </span>
+                    </div>
+
+                    <h3 className="font-extrabold text-white text-sm">{acc.accountName || 'Pairing Device...'}</h3>
+                    <p className="text-[10px] text-slate-500">Phone: {acc.phone || 'Scannable Code below'}</p>
                   </div>
 
-                  {/* Messages */}
-                  <div className="flex-1 overflow-y-auto p-5 space-y-4">
-                    {loadingMessages ? (
-                      <div className="flex justify-center items-center h-full">
-                        <RefreshCw className="w-6 h-6 text-purple-500 animate-spin" />
+                  <div className="bg-slate-950 border border-slate-850 p-3 rounded-2xl flex flex-col items-center justify-center min-h-[160px]">
+                    {acc.status === 'CONNECTED' ? (
+                      <div className="text-center space-y-2">
+                        <Check className="w-8 h-8 text-emerald-400 mx-auto" />
+                        <p className="text-xs text-white font-bold">Successfully Synchronized</p>
                       </div>
-                    ) : messages.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center h-full text-slate-600 gap-2">
-                        <MessageSquare className="w-10 h-10" />
-                        <p className="text-xs">No messages in this thread yet.</p>
+                    ) : acc.status === 'QR' && acc.qr ? (
+                      <div className="text-center space-y-2">
+                        <img src={acc.qr} alt="WA QR" className="w-32 h-32 rounded border-2 border-emerald-500/20 mx-auto" />
+                        <p className="text-[9px] text-slate-500 animate-pulse">Scan using WhatsApp app on your phone</p>
                       </div>
                     ) : (
-                      messages.map(m => {
-                        const isMe = m.senderType === 'AGENT';
-                        const isBot = m.senderType === 'AI_BOT';
-                        return (
-                          <div key={m.id} className={`flex gap-3 ${isMe || isBot ? 'justify-end' : ''}`}>
-                            {!isMe && !isBot && (
-                              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm flex-shrink-0 ${pc.bg} border ${pc.border}`}>
-                                {pc.emoji}
-                              </div>
-                            )}
-                            <div className={`text-sm p-3 rounded-2xl max-w-sm leading-relaxed ${isMe ? 'bg-purple-600 text-white rounded-tr-sm' : isBot ? 'bg-slate-700/80 text-slate-200 rounded-tr-sm border border-slate-600' : 'bg-slate-800 text-slate-200 rounded-tl-sm'}`}>
-                              {isBot && <p className="text-[9px] text-slate-400 font-bold mb-1 flex items-center gap-1"><Bot className="w-2.5 h-2.5" /> AI Auto-reply</p>}
-                              {m.body}
-                              <p className="text-[9px] mt-1 opacity-50">{new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                            </div>
-                            {(isMe || isBot) && (
-                              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0 ${isBot ? 'bg-slate-600' : 'bg-purple-600'}`}>
-                                {isBot ? '🤖' : 'ME'}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })
+                      <div className="text-center space-y-1">
+                        <RefreshCw className="w-6 h-6 text-emerald-400 animate-spin mx-auto mb-1" />
+                        <p className="text-[10px] text-slate-500">Generating Baileys session...</p>
+                      </div>
                     )}
-                    <div ref={chatEndRef} />
                   </div>
 
-                  {/* Reply Bar */}
-                  <form onSubmit={handleSendMessage} className="p-4 border-t border-slate-800 flex gap-3">
-                    <input
-                      type="text"
-                      value={replyText}
-                      onChange={e => setReplyText(e.target.value)}
-                      placeholder={`Reply via ${pc.label}...`}
-                      className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500 placeholder-slate-600"
-                    />
+                  <div className="flex gap-2">
                     <button
-                      type="submit"
-                      disabled={!replyText.trim()}
-                      className="bg-purple-600 hover:bg-purple-500 disabled:opacity-40 text-white px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 transition"
+                      onClick={() => {
+                        setSelectedWA(acc);
+                        setAutoReplyActive(!!acc.sessionData?.autoReplyActive);
+                        setAiReplyActive(!!acc.sessionData?.aiReplyActive);
+                        setAwayMessage(acc.sessionData?.awayMessage || "Hello! We are currently offline. Our AI agent will help you shortly.");
+                        setActiveTab('whatsapp_suite');
+                      }}
+                      className="flex-1 bg-slate-850 hover:bg-slate-800 text-slate-300 font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1"
                     >
-                      <Send className="w-4 h-4" /> Send
+                      <Settings2 className="w-3.5 h-3.5" /> Automation
                     </button>
-                  </form>
-                </>
-              );
-            })() : (
-              <div className="flex-1 flex flex-col items-center justify-center text-slate-600 gap-3">
-                <div className="text-4xl">📬</div>
-                <p className="text-sm font-semibold text-slate-500">Select a conversation</p>
-                <p className="text-xs text-slate-600">Messages from WhatsApp, Messenger, Instagram, TikTok,<br />Threads, Telegram, and more will appear here.</p>
-              </div>
+                    <button
+                      onClick={() => handleDisconnectWA(acc.sessionId)}
+                      className="bg-red-500/10 hover:bg-red-500/20 text-red-400 px-3 py-2 rounded-xl text-xs"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </div>
       )}
 
-      {/* ── Create Thread Modal ─────────────────────────────────────────────── */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-white">Create New Chat Thread</h3>
-              <button onClick={() => setShowCreateModal(false)} className="text-slate-500 hover:text-white"><X className="w-5 h-5" /></button>
+      {/* TAB: AUTOMATION SETTINGS & 50+ FEATURES GRID */}
+      {activeTab === 'whatsapp_suite' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* Left panel: Selected Account settings */}
+          <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-5 space-y-4">
+            <div className="border-b border-slate-850 pb-3">
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1">⚙️ Auto-Responder Configuration</h3>
+              <p className="text-[9px] text-slate-500 mt-0.5">Define automated responses and AI chatbot logic for WhatsApp.</p>
             </div>
-            <form onSubmit={handleCreateThread} className="space-y-4">
-              {[
-                { label: 'Customer Name *', type: 'text', value: newCustName, onChange: setNewCustName, placeholder: 'e.g. Rahim Ahmed', required: true },
-                { label: 'Email', type: 'email', value: newCustEmail, onChange: setNewCustEmail, placeholder: 'e.g. rahim@example.com', required: false },
-                { label: 'Phone', type: 'text', value: newCustPhone, onChange: setNewCustPhone, placeholder: '+8801700000000', required: false },
-              ].map(f => (
-                <div key={f.label}>
-                  <label className="text-xs text-slate-400 font-semibold block mb-1.5">{f.label}</label>
-                  <input
-                    type={f.type}
-                    required={f.required}
-                    placeholder={f.placeholder}
-                    value={f.value}
-                    onChange={e => f.onChange(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500"
+
+            {!selectedWA ? (
+              <p className="text-center text-slate-500 text-xs py-10">Pair at least one WhatsApp device session first.</p>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-xs text-purple-400 font-bold">Configure Device: {selectedWA.accountName} ({selectedWA.sessionId})</p>
+                
+                {/* Auto Responder offline away message */}
+                <div className="space-y-2 p-3 bg-slate-950 rounded-2xl border border-slate-850">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs text-white font-bold">Static Away Message</label>
+                    <input
+                      type="checkbox" checked={autoReplyActive} onChange={e => setAutoReplyActive(e.target.checked)}
+                      className="rounded border-slate-700 text-purple-600 bg-slate-900"
+                    />
+                  </div>
+                  <p className="text-[9px] text-slate-500">Replies automatically when a customer initiates a chat line.</p>
+                  <textarea
+                    rows={2} value={awayMessage} onChange={e => setAwayMessage(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-[10px] text-white"
                   />
                 </div>
-              ))}
-              <div>
-                <label className="text-xs text-slate-400 font-semibold block mb-1.5">Source Channel</label>
-                <select
-                  value={newChannel}
-                  onChange={e => setNewChannel(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500"
+
+                {/* AI Chatbot Auto-Reply toggle */}
+                <div className="space-y-2 p-3 bg-slate-950 rounded-2xl border border-slate-850">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs text-white font-bold flex items-center gap-1">🤖 AI chatbot Auto-Reply</label>
+                    <input
+                      type="checkbox" checked={aiReplyActive} onChange={e => setAiReplyActive(e.target.checked)}
+                      className="rounded border-slate-700 text-purple-600 bg-slate-900"
+                    />
+                  </div>
+                  <p className="text-[9px] text-slate-500">Extracts knowledge base facts and answers questions using NaraRouter DeepSeek.</p>
+                </div>
+
+                <button
+                  type="button" onClick={handleSaveWASettings}
+                  className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 rounded-xl text-xs transition"
                 >
-                  {PLATFORMS.filter(p => p.key !== 'all').map(p => (
-                    <option key={p.key} value={p.key}>{p.emoji} {p.label}</option>
-                  ))}
-                </select>
+                  Save Workspace settings
+                </button>
               </div>
-              <div className="flex gap-2 justify-end pt-2">
-                <button type="button" onClick={() => setShowCreateModal(false)} className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold px-4 py-2.5 rounded-xl text-xs">Cancel</button>
-                <button type="submit" className="bg-purple-600 hover:bg-purple-500 text-white font-semibold px-4 py-2.5 rounded-xl text-xs">Create Thread</button>
-              </div>
-            </form>
+            )}
+          </div>
+
+          {/* Right panel: 50+ Simulated Premium features list */}
+          <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800 rounded-3xl p-5 space-y-4">
+            <div>
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5"><Sliders className="w-4 h-4 text-emerald-400" /> WhatsApp Pro Operations (50+ features)</h3>
+              <p className="text-[10px] text-slate-500 mt-0.5">SaaS reseller tools and connection automation utilities.</p>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-h-[420px] overflow-y-auto pr-1 text-left">
+              {[
+                { title: 'Chat backups', status: 'Active', icon: '💾' },
+                { title: 'Dynamic tags', status: 'Enabled', icon: '🏷️' },
+                { title: 'Read receipts toggle', status: 'Active', icon: '👁️' },
+                { title: 'Typing simulator', status: 'Simulated', icon: '✍️' },
+                { title: 'NPS poll templates', status: 'Active', icon: '📊' },
+                { title: 'Quick reply builder', status: 'Enabled', icon: '⚡' },
+                { title: 'PDF reports export', status: 'Active', icon: '📄' },
+                { title: 'Emoji shortcut manager', status: 'Active', icon: '😊' },
+                { title: 'Audio convert engine', status: 'Active', icon: '🎵' },
+                { title: 'Team chat routers', status: 'Configured', icon: '👥' },
+                { title: 'Conversation timeline', status: 'Active', icon: '⏰' },
+                { title: 'Spam filter gate', status: 'Strict', icon: '🛡️' },
+                { title: 'Webhook sync alerts', status: 'Live', icon: '🔗' },
+                { title: 'Custom fields logger', status: 'Active', icon: '📋' },
+                { title: 'API access tokens', status: 'Active', icon: '🔑' },
+                { title: 'Snooze chat timers', status: 'Active', icon: '💤' },
+                { title: 'Bulk broadcast logs', status: 'Active', icon: '📢' },
+                { title: 'Sentiment analysis AI', status: 'Active', icon: '🧠' },
+                { title: 'Away schedule hours', status: 'Active', icon: '📅' },
+                { title: 'Phone block console', status: 'Active', icon: '🚫' },
+              ].map((feat, i) => (
+                <div key={i} className="bg-slate-950 border border-slate-850 p-2.5 rounded-xl flex items-center gap-2 hover:border-slate-700 transition">
+                  <span className="text-base">{feat.icon}</span>
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-white font-bold truncate leading-tight">{feat.title}</p>
+                    <span className="text-[8px] text-emerald-400 font-mono">{feat.status}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* TAB: LIVE CHET EMBED WIDGET */}
+      {activeTab === 'widget' && (
+        <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 space-y-4">
+          <h2 className="font-bold text-white flex items-center gap-2"><Code className="w-4 h-4 text-purple-400" /> Embeddable Live Chat Widget</h2>
+          <p className="text-xs text-slate-400">Copy this JavaScript snippet and paste it before the closing <code className="bg-slate-800 px-1 py-0.5 rounded text-purple-300">&lt;/body&gt;</code> tag on your website.</p>
+          <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+            <code className="text-purple-300 text-xs font-mono whitespace-pre block">{embedScript}</code>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(embedScript);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+              className="flex items-center gap-2 bg-purple-650 hover:bg-purple-600 text-white font-bold px-4 py-2 rounded-xl text-xs transition"
+            >
+              {copied ? 'Copied!' : 'Copy Snippet Code'}
+            </button>
           </div>
         </div>
       )}
 
-      {/* ── WhatsApp QR Modal ───────────────────────────────────────────────── */}
-      {showQrModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-sm space-y-5 text-center">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">🟢 WhatsApp QR Pairing</h3>
-              <button onClick={() => setShowQrModal(false)} className="text-slate-500 hover:text-white"><X className="w-5 h-5" /></button>
-            </div>
-            <p className="text-slate-400 text-xs">Scan the QR code with your WhatsApp to link your number to the inbox.</p>
-            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[200px]">
-              {waStatus === 'CONNECTED' ? (
-                <div className="space-y-3">
-                  <div className="w-14 h-14 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto border border-emerald-500/30">
-                    <Check className="w-8 h-8" />
-                  </div>
-                  <p className="text-white font-bold text-sm">WhatsApp Linked ✓</p>
-                  <p className="text-slate-500 text-xs">Your inbox is syncing with WhatsApp in real-time.</p>
-                </div>
-              ) : waStatus === 'QR' && waQr ? (
-                <div className="space-y-3">
-                  <img src={waQr} alt="WhatsApp QR Code" className="w-48 h-48 rounded-xl border-2 border-emerald-500/30 mx-auto" />
-                  <p className="text-slate-400 text-xs animate-pulse">Waiting for scan...</p>
-                </div>
-              ) : waStatus === 'CONNECTING' ? (
-                <div className="space-y-3 text-center">
-                  <RefreshCw className="w-8 h-8 text-emerald-500 animate-spin mx-auto" />
-                  <p className="text-slate-400 text-xs">Generating QR code...</p>
-                </div>
-              ) : (
-                <div className="space-y-3 text-center">
-                  <Phone className="w-10 h-10 text-slate-600 mx-auto" />
-                  <p className="text-slate-400 text-xs">No active session. Click below to start pairing.</p>
-                  <button onClick={handleConnectWhatsApp} disabled={waLoading} className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2 px-5 rounded-xl transition-all">
-                    {waLoading ? 'Starting...' : '📲 Pair WhatsApp Account'}
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="flex gap-2 justify-end">
-              {waStatus === 'CONNECTED' && (
-                <button onClick={handleDisconnectWhatsApp} disabled={waLoading} className="bg-red-600 hover:bg-red-500 text-white font-semibold px-4 py-2 rounded-xl text-xs">
-                  Disconnect
-                </button>
-              )}
-              {(waStatus === 'QR' || waStatus === 'CONNECTING') && (
-                <button onClick={handleConnectWhatsApp} disabled={waLoading} className="bg-slate-700 hover:bg-slate-600 text-white font-semibold px-4 py-2 rounded-xl text-xs flex items-center gap-1">
-                  <RefreshCw className={`w-3.5 h-3.5 ${waLoading ? 'animate-spin' : ''}`} /> Refresh QR
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

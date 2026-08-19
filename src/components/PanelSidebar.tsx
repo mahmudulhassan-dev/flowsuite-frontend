@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Calendar, MessageSquare, Bot,
   FolderOpen, Send, Users, Wallet, Settings,
   Globe, ChevronLeft, ChevronRight, DollarSign, Gift, FileText, Lock,
-  Link2, QrCode, Wrench, BarChart3, BookOpen, ClipboardList
+  Link2, QrCode, Wrench, BarChart3, BookOpen, ClipboardList, Brain
 } from 'lucide-react';
 
 import { useAuth } from '../lib/auth-context';
@@ -24,6 +24,7 @@ export default function PanelSidebar() {
     { name: 'Dashboard', href: '/panel', icon: LayoutDashboard, color: 'text-blue-400' },
     { name: 'Social Publisher', href: '/panel/publisher', icon: Calendar, color: 'text-purple-400' },
     { name: 'Unified Inbox', href: '/panel/inbox', icon: MessageSquare, color: 'text-blue-400' },
+    { name: 'AI System Memory', href: '/panel/memory', icon: Brain, color: 'text-indigo-400' },
     { name: 'AI Agent Studio', href: '/panel/ai-studio', icon: Bot, color: 'text-amber-400' },
     { name: 'Bio Links', href: '/panel/bio-links', icon: Link2, color: 'text-emerald-400' },
     { name: 'URL Shortener', href: '/panel/shortener', icon: Globe, color: 'text-blue-400' },
